@@ -22,6 +22,9 @@
 1. Trong Supabase mở **SQL Editor → New query**.
 2. Dán toàn bộ nội dung tệp `supabase.sql` rồi bấm **Run**. Thấy "Success" là xong.
 
+### 2b. (Tùy chọn) Nạp dữ liệu demo
+Muốn dùng thử ngay với 12 người mẫu và lịch tháng 10, tháng 11 đã xếp sẵn: trong SQL Editor, dán nội dung tệp `demo-data.sql` rồi bấm **Run**. Tài khoản trưởng ban là mã số `VH01`, nhân viên là `VH02` đến `VH12`. PIN demo ghi trong đầu tệp `demo-data.sql` và rất yếu, nên đổi hết trước khi dùng thật. Nếu nạp demo thì sẽ không hiện màn hình thiết lập lần đầu ở bước 5.
+
 ### 3. Điền khóa kết nối
 1. Trong Supabase mở **Project Settings → API**.
 2. Chép **Project URL** và khóa **anon public**.
