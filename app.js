@@ -29,11 +29,12 @@ var me='';
 var toastMsg='',toastT=null,scrolledFor='',unlocked={};
 
 function can(){return CANEDIT&&!viewAsStaff;}
-function monthLocked(m){return m<ymNow;}
+var LOCK_DAY=10; /* tháng M khóa từ 00:00 ngày 10 của tháng M+1 (giờ Việt Nam) */
+function monthLocked(m){return TODAY>=addM(m,1)+'-'+pad(LOCK_DAY);}
 function editable(m){return !monthLocked(m)||(can()&&!!unlocked[m]);}
 function lockBar(m){
   if(!monthLocked(m))return '';
-  var h='<div class="alert info np row sp"><span><b>Tháng '+m.slice(5,7)+'/'+m.slice(0,4)+' đã khóa.</b> '+(can()?(unlocked[m]?'Bạn đang mở khóa để chỉnh sửa.':'Chỉ trưởng ban mới sửa được tháng đã qua.'):'Chỉ trưởng ban mới sửa được tháng đã qua.')+'</span>';
+  var h='<div class="alert info np row sp"><span><b>Tháng '+m.slice(5,7)+'/'+m.slice(0,4)+' đã khóa (từ ngày '+LOCK_DAY+' tháng sau).</b> '+(can()?(unlocked[m]?'Bạn đang mở khóa để chỉnh sửa.':'Chỉ trưởng ban mới sửa được tháng đã qua.'):'Chỉ trưởng ban mới sửa được tháng đã qua.')+'</span>';
   if(can())h+='<button class="btn sm" data-act="togunlock" data-arg="'+m+'">'+(unlocked[m]?'Khóa lại':'Mở khóa để chỉnh sửa')+'</button>';
   return h+'</div>';
 }

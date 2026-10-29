@@ -50,7 +50,7 @@ Gửi địa chỉ trang cho từng người. Trên điện thoại mở bằng 
 - Ngày mùng 1: trưởng ban vào tab **Lịch trực**, chọn đúng tháng và bấm **Tạo lịch tháng**.
 - Có người vào hoặc nghỉ giữa tháng: sửa ở tab **Nhân sự**, rồi bấm **Xếp lại từ ngày N** (các ngày trước N giữ nguyên).
 - Nhân viên muốn đổi ca: tab **Đổi ca** → gửi đề nghị. Trưởng ban bấm **Đồng ý** thì lịch tự cập nhật.
-- Khi sang tháng mới, lịch tháng cũ tự khóa: nhân viên không ghi được giao ban hay đề nghị đổi ca của tháng đã qua, và không ai chỉnh được lịch tháng đó. Chỉ trưởng ban thấy nút **Mở khóa để chỉnh sửa** trên thanh thông báo của tháng đó (bấm **Khóa lại** khi xong). Ngày nghỉ phiên của từng người được lưu cố định theo từng tháng nên đổi hồ sơ sau này không làm thay đổi bảng công cũ.
+- Lịch mỗi tháng tự khóa vào 00:00 ngày 10 của tháng sau (ví dụ tháng 10 khóa từ 10/11), để còn vài ngày điều chỉnh. Sau đó nhân viên không ghi được giao ban hay đề nghị đổi ca của tháng đó, và không ai chỉnh được lịch tháng đó. Chỉ trưởng ban thấy nút **Mở khóa để chỉnh sửa** trên thanh thông báo của tháng đó (bấm **Khóa lại** khi xong). Ngày nghỉ phiên của từng người được lưu cố định theo từng tháng nên đổi hồ sơ sau này không làm thay đổi bảng công cũ.
 - Cuối tháng: tab **Tổng hợp**, bấm **Tải CSV** nếu cần gửi đi.
 
 ## Lưu ý
