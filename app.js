@@ -180,7 +180,7 @@ function sw(st){
 }
 function legend(){
   return '<div class="legend">'+KEYS.map(function(k){return '<span class="lg">'+sw(k)+SHIFTS[k].n+' '+SHIFTS[k].t+'</span>';}).join('')+
-  '<span class="lg">'+sw('P')+'Nghỉ phiên</span><span class="lg">'+sw('L')+'Nghỉ phép</span></div>';
+  '<span class="lg">'+sw('P')+'Nghỉ phiên</span><span class="lg">'+sw('L')+'Nghỉ phép</span><span class="lg"><span class="mvdot"></span>Trưởng ban điều chuyển</span></div>';
 }
 function header(){
   var h='<div class="top"><div class="brand"><span class="eyebrow">Bảo Vệ Việt Hưng · 3 ca · 8 giờ/ca</span><h1>Lịch trực</h1></div><div class="ctl">';
@@ -271,7 +271,7 @@ function tabLich(){
   return h;
 }
 function matrix(list){
-  var N=dim(ym),d,k,h='<div class="mx-wrap" id="mxw"><table class="mx"><thead><tr><th class="sticky">Nhân viên</th>';
+  var m0=S.months[ym],N=dim(ym),d,k,h='<div class="mx-wrap" id="mxw"><table class="mx"><thead><tr><th class="sticky">Nhân viên</th>';
   for(d=1;d<=N;d++){
     k=dk(ym,d);var w=wdOfKey(k);
     h+='<th class="'+((w===0||w===6)?'we ':'')+(k===TODAY?'today ':'')+(k===selDate?'sel':'')+'" data-act="pickdate" data-arg="'+k+'"><span class="wd">'+WD[w]+'</span><span class="dn">'+d+'</span></th>';
@@ -281,7 +281,7 @@ function matrix(list){
     h+='<tr><th class="sticky"><span class="nm">'+esc(s.name)+'</span><span class="cd">'+esc(s.code||'')+(s.role==='head'?' · Trưởng ban':'')+'</span></th>';
     for(d=1;d<=N;d++){
       k=dk(ym,d);var st=statusOf(s.id,k);
-      var cls=(st?'s-'+st:'s-N')+(k===TODAY?' todaycol':'')+(k===selDate&&selStaff===s.id?' sel':'');
+      var cls=(st?'s-'+st:'s-N')+(m0&&m0.moved&&m0.moved[k]&&m0.moved[k][s.id]?' mv':'')+(k===TODAY?' todaycol':'')+(k===selDate&&selStaff===s.id?' sel':'');
       h+='<td class="c '+cls+'" data-act="pickcell" data-arg="'+k+'|'+s.id+'" title="'+esc(s.name)+' · '+fmtD(k)+'">'+(st?sym(st):'·')+'</td>';
     }
     h+='</tr>';
@@ -299,14 +299,20 @@ function matrix(list){
 function rosterFor(k,x){return monthStaff(k.slice(0,7)).filter(function(s){return statusOf(s.id,k)===x;});}
 function dayPanel(){
   var k=selDate;if(!k||k.slice(0,7)!==ym)return '';
+  var canMove=can()&&editable(ym);
   var h='<div class="card stack np"><div class="row sp"><h2>'+WDF[wdOfKey(k)]+', '+fmtD(k)+'</h2><button class="btn sm" data-act="gohoDate" data-arg="'+k+'">Mở giao ban ngày này</button></div><div class="cols3">';
   KEYS.forEach(function(x){
     var r=rosterFor(k,x),note=S.notes[k+'_'+x];
-    h+='<div class="shiftcard"><header class="s-'+x+'"><b>'+x+'</b><span class="small">'+SHIFTS[x].t+'</span></header><div class="bd"><div class="names">'+
-      (r.length?r.map(function(s){return '<span class="tag">'+esc(s.name)+'</span>';}).join(''):'<span class="err">Chưa có ai</span>')+'</div>'+
+    h+='<div class="shiftcard"><header class="s-'+x+'"><b>'+x+'</b><span class="small">'+r.length+' người · '+SHIFTS[x].t+'</span></header><div class="bd"><div class="names">'+
+      (r.length?r.map(function(s){
+        var t='<span class="tag mvtag">'+esc(s.name);
+        if(canMove)t+=KEYS.filter(function(y){return y!==x;}).map(function(y){return '<button class="mvb s-'+y+'" data-act="moveto" data-arg="'+s.id+'|'+y+'" title="Chuyển '+esc(s.name)+' sang '+y+'">→'+y+'</button>';}).join('');
+        return t+'</span>';
+      }).join(''):'<span class="err">Chưa có ai</span>')+'</div>'+
       (note&&note.text?'<div class="hint"><b>Giao ban:</b> '+esc(note.text.length>140?note.text.slice(0,140)+'…':note.text)+'</div>':'<div class="hint">Chưa có ghi chú giao ban.</div>')+'</div></div>';
   });
   h+='</div>';
+  if(canMove)h+='<div class="hint">Trưởng ban bấm nút →K1, →K2, →K3 cạnh tên để chuyển người sang ca khác trong cùng ngày. Ô được điều chuyển có chấm đen trong bảng.</div>';
   var off=monthStaff(ym).filter(function(s){return statusOf(s.id,k)==='P';}),lv=monthStaff(ym).filter(function(s){return statusOf(s.id,k)==='L';});
   h+='<div class="row small">'+sw('P')+'<span>'+(off.length?esc(off.map(function(s){return s.name;}).join(', ')):'không ai nghỉ phiên')+'</span>'+sw('L')+'<span>'+(lv.length?esc(lv.map(function(s){return s.name;}).join(', ')):'không ai nghỉ phép')+'</span></div>';
   if(can()&&editable(ym)&&selStaff&&S.staff[selStaff]){
@@ -522,13 +528,28 @@ var ACT={
   regen:function(){
     if(!editable(ym)){toast('Tháng đã khóa.');return;}
     var f=Math.min(Math.max(parseInt(draft.fromDay,10)||1,1),dim(ym));
-    put('months',ym,{assign:generate(ym,f,draft.hs||''),generatedAt:Date.now(),fromDay:f,headShift:draft.hs||'',offDays:snapshotOff()});
+    var mv0={},om=(S.months[ym]&&S.months[ym].moved)||{};Object.keys(om).forEach(function(k){if(+k.slice(8,10)<f)mv0[k]=om[k];});
+    put('months',ym,{moved:mv0,assign:generate(ym,f,draft.hs||''),generatedAt:Date.now(),fromDay:f,headShift:draft.hs||'',offDays:snapshotOff()});
     toast('Đã xếp lại từ ngày '+f);
+  },
+  moveto:function(a){
+    var p=a.split('|'),id=p[0],to=p[1],k=selDate;
+    if(!can()||!editable(ym)){toast('Tháng đã khóa.');return;}
+    if(!k||k.slice(0,7)!==ym||!S.staff[id]||KEYS.indexOf(to)<0)return;
+    var from=shiftOf(id,k);
+    if(!from||from===to)return;
+    var m=clone(S.months[ym]);m.assign=m.assign||{};m.assign[k]=m.assign[k]||{};
+    m.assign[k][id]=to;m.moved=m.moved||{};m.moved[k]=m.moved[k]||{};m.moved[k][id]=from;
+    put('months',ym,m);
+    var left=rosterFor(k,from).length,now=rosterFor(k,to).length;
+    toast('Đã chuyển '+nameOf(id)+' từ '+from+' sang '+to+' ngày '+fmtD(k).slice(0,5)+'. '+to+' nay có '+now+' người'+(left===0?'. Chú ý: '+from+' không còn ai.':'.'));
   },
   setshift:function(a){
     if(!can()||!selStaff||!selDate||!editable(ym)){toast('Tháng đã khóa.');return;}
     var m=clone(S.months[ym]);m.assign=m.assign||{};m.assign[selDate]=m.assign[selDate]||{};
+    var prev=m.assign[selDate][selStaff];
     if(a)m.assign[selDate][selStaff]=a;else delete m.assign[selDate][selStaff];
+    if(a&&prev&&prev!==a){m.moved=m.moved||{};m.moved[selDate]=m.moved[selDate]||{};m.moved[selDate][selStaff]=prev;}
     put('months',ym,m);
   },
   gohoDate:function(a){draft.hoDate=a;draft.noteDate='';tab='giaoban';render();},
