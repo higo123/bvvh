@@ -160,7 +160,7 @@ returns jsonb
 language plpgsql security definer
 set search_path = public, extensions
 as $$
-declare m public.accounts;
+declare m public.accounts; cur text; mon text;
 begin
   m := public._me(p_token);
   if m.staff_id is null then return jsonb_build_object('ok', false, 'error', 'expired'); end if;
@@ -172,6 +172,13 @@ begin
   end if;
   if p_data is null or jsonb_typeof(p_data) <> 'object' or length(p_data::text) > 200000 then
     return jsonb_build_object('ok', false, 'error', 'Dữ liệu không hợp lệ.');
+  end if;
+  -- Khóa tháng đã qua: nhân viên không ghi được vào giao ban hoặc đề nghị đổi ca của tháng cũ.
+  cur := to_char(now() at time zone 'Asia/Ho_Chi_Minh', 'YYYY-MM');
+  mon := case p_col when 'notes' then substr(p_id, 1, 7)
+                    when 'swaps' then substr(coalesce(p_data ->> 'date', ''), 1, 7) else null end;
+  if not m.is_head and mon ~ '^[0-9]{4}-[0-9]{2}$' and mon < cur then
+    return jsonb_build_object('ok', false, 'error', 'Tháng này đã khóa, chỉ trưởng ban sửa được.');
   end if;
   if p_col in ('notes') then
     null; -- mọi nhân viên đã đăng nhập được ghi giao ban
