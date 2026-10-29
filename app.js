@@ -395,10 +395,19 @@ function staffForm(){
   '<div class="row"><button class="btn pri" data-act="savestaff">Lưu</button><button class="btn" data-act="cancelstaff">Hủy</button></div></div>';
   return h;
 }
+function viewerCard(){
+  var h='<div class="card stack"><div class="row sp"><div class="stack" style="gap:2px"><h3>Tài khoản đối chiếu (chỉ xem)</h3><span class="hint">DoiChieu · mã đăng nhập 0001. Dành cho phòng nhân sự kiểm tra thông tin. Nếu họ quên PIN, đặt lại về <b>123456</b> ở đây.</span></div>';
+  if(draft.confirm==='resetviewer')h+='<span class="row"><button class="btn red" data-act="resetviewer2">Xác nhận đặt lại PIN</button><button class="btn" data-act="cancel">Hủy</button></span>';
+  else h+='<button class="btn red" data-act="resetviewer1">Đặt lại PIN DoiChieu về 123456</button>';
+  h+='</div>';
+  if(draft.confirm==='resetviewer')h+='<div class="alert warn">Đặt lại PIN của tài khoản DoiChieu (0001) về 123456? Mọi máy đang đăng nhập bằng tài khoản này sẽ bị đăng xuất. Nhắc họ đổi PIN sau khi đăng nhập.</div>';
+  return h+'</div>';
+}
 function tabNhanSu(){
   var list=staffList(),h='<div class="row sp"><div class="stack"><h2>Nhân sự ('+list.filter(function(s){return s.active!==false;}).length+' đang làm)</h2><span class="hint">Mã số và hồ sơ do trưởng ban quản lý. Số nhân viên thêm bớt tự do, lịch sẽ xếp lại theo danh sách mới.</span></div>'+
   (can()?'<div class="row"><button class="btn pri" data-act="newstaff">Thêm nhân viên</button></div>':'')+'</div>';
   h+=staffForm();
+  if(can())h+=viewerCard();
   if(!list.length){
     return h+'<div class="card empty"><p class="muted" style="margin:0">Chưa có ai trong danh sách.</p>'+'</div>';
   }
@@ -490,6 +499,12 @@ var ACT={
   mprev:function(){ym=addM(ym,-1);selDate=ym===ymNow?TODAY:ym+'-01';draft.fromDay=null;draft.confirm='';render();},
   mnext:function(){ym=addM(ym,1);selDate=ym===ymNow?TODAY:ym+'-01';draft.fromDay=null;draft.confirm='';render();},
   logout:function(){logout(false);},
+  resetviewer1:function(){if(!can())return;draft.confirm='resetviewer';render();},
+  resetviewer2:function(){
+    if(!can())return;
+    draft.confirm='';render();
+    api('api_reset_viewer_pin',{}).then(function(){toast('Đã đặt lại PIN của DoiChieu (0001) về 123456. Nhắc họ đổi PIN.');}).catch(function(e){toast(e.message);});
+  },
   togunlock:function(a){unlocked[a]=!unlocked[a];render();},
   print:function(){try{window.print();}catch(e){toast('Không mở được hộp thoại in.');}},
   pinopen:function(){draft.pinOpen=!draft.pinOpen;draft.pinForm={old:'',nw:'',err:''};render();},

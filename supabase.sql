@@ -331,6 +331,31 @@ begin
   return jsonb_build_object('ok', true);
 end $$;
 
+create or replace function public.api_reset_viewer_pin(p_token text)
+returns jsonb
+language plpgsql security definer
+set search_path = public, extensions
+as $$
+declare m public.accounts; n int;
+begin
+  m := public._me(p_token);
+  if m.staff_id is null then return jsonb_build_object('ok', false, 'error', 'expired'); end if;
+  if not m.is_head then
+    return jsonb_build_object('ok', false, 'error', 'Chỉ trưởng ban thực hiện được.');
+  end if;
+  update public.accounts
+     set pin_hash = crypt('123456', gen_salt('bf')), failed = 0, locked_until = null
+   where staff_id = 'viewer_doichieu';
+  get diagnostics n = row_count;
+  if n = 0 then
+    return jsonb_build_object('ok', false, 'error', 'Chưa có tài khoản đối chiếu. Hãy chạy tệp tai-khoan-doi-chieu.sql trước.');
+  end if;
+  delete from public.sessions where staff_id = 'viewer_doichieu';
+  return jsonb_build_object('ok', true);
+end $$;
+revoke all on function public.api_reset_viewer_pin(text) from public;
+grant execute on function public.api_reset_viewer_pin(text) to anon, authenticated;
+
 -- ---------------------------------------------------------------- quyền gọi hàm
 revoke all on function
   public.needs_setup(), public.setup_head(text, text, text, text), public.login(text, text),

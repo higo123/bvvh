@@ -57,7 +57,7 @@ Gửi địa chỉ trang cho từng người. Trên điện thoại mở bằng 
 
 Dành cho phòng nhân sự hoặc người kiểm tra. Xem được mọi tab nhưng không có nút thao tác nào, và máy chủ từ chối mọi lệnh ghi. Tài khoản này không phải nhân viên nên không có tên trong bảng lịch, bảng tổng hợp hay danh sách nhân sự.
 
-Cách tạo: dán lại `supabase.sql` (bản mới nhất) vào SQL Editor rồi Run, sau đó dán và Run `tai-khoan-doi-chieu.sql`. Tệp này tạo tài khoản mã đăng nhập `0001`, PIN `12345`. Người dùng nên bấm **Đổi PIN** (ít nhất 6 ký tự) ngay lần đầu. Muốn xóa tài khoản, chạy lệnh `delete` ghi ở cuối tệp.
+Cách tạo: dán lại `supabase.sql` (bản mới nhất) vào SQL Editor rồi Run, sau đó dán và Run `tai-khoan-doi-chieu.sql`. Tệp này tạo tài khoản mã đăng nhập `0001`, PIN `12345`. Người dùng nên bấm **Đổi PIN** (ít nhất 6 ký tự) ngay lần đầu. Nếu họ quên PIN, trưởng ban vào tab **Nhân sự** và bấm nút đỏ **Đặt lại PIN DoiChieu về 123456** (có bước xác nhận), không cần chạy SQL. Muốn xóa tài khoản, chạy lệnh `delete` ghi ở cuối tệp `tai-khoan-doi-chieu.sql`.
 
 ## Lưu ý
 - Mỗi khi repo có thay đổi ở `supabase.sql`, hãy dán lại toàn bộ tệp vào SQL Editor và Run một lần (chạy lại an toàn, không mất dữ liệu).

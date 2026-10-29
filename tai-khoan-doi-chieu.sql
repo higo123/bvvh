@@ -3,6 +3,7 @@
 -- Xem được mọi tab như trưởng ban nhưng không có nút thao tác và máy chủ từ chối mọi lệnh ghi.
 -- Chạy SAU khi đã chạy supabase.sql bản mới nhất. Chạy lại được: sẽ đặt lại PIN về 12345.
 -- PIN 12345 rất yếu. Hãy đăng nhập rồi bấm "Đổi PIN" để đặt PIN riêng (ít nhất 6 ký tự).
+-- Quên PIN: trưởng ban vào tab Nhân sự, bấm nút đỏ "Đặt lại PIN DoiChieu về 123456" (không cần chạy lại SQL).
 
 alter table public.accounts add column if not exists is_viewer boolean not null default false;
 alter table public.accounts add column if not exists display_name text;
