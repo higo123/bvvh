@@ -94,7 +94,7 @@ function statusOf(id,k){
 }
 
 /* ---------- thuật toán xếp ca ---------- */
-function generate(month,fromDay){
+function generate(month,fromDay,hs){
   var act=activeStaff(),N=dim(month);
   var old=(S.months[month]&&S.months[month].assign)||{};
   var assign={},cnt={},idx={};
@@ -108,10 +108,13 @@ function generate(month,fromDay){
   var order=['K3','K1','K2'];
   for(d=fromDay;d<=N;d++){
     k=dk(month,d);
-    var av=act.filter(function(s){return !onLeave(s.id,k)&&!isOffDay(s,k);});
-    var n=av.length,sz={K1:0,K2:0,K3:0},i;
+    var av0=act.filter(function(s){return !onLeave(s.id,k)&&!isOffDay(s,k);});
+    var fixed=hs?av0.filter(function(s){return s.role==='head';}):[];
+    var av=av0.filter(function(s){return fixed.indexOf(s)<0;});
+    var n=av0.length,sz={K1:0,K2:0,K3:0},i,res={};
     for(i=0;i<n;i++)sz[order[(i+d)%3]]++;
-    var pool=av.slice(),res={};
+    fixed.forEach(function(s){res[s.id]=hs;if(sz[hs]>0)sz[hs]--;});
+    var pool=av.slice();
     var tie=function(s){return ((idx[s.id]+d)%Math.max(act.length,1))/100;};
     var take=function(key,count,fn){
       pool.sort(function(a,b){return (fn(a)+tie(a))-(fn(b)+tie(b));});
@@ -182,7 +185,7 @@ function header(){
 function printHead(){
   var t=tab==='tonghop'?'Bảng tổng hợp tháng ':'Lịch trực tháng ';
   return '<div class="ph"><div class="ph-org">Bảo Vệ Việt Hưng</div><h1>'+t+ym.slice(5,7)+'/'+ym.slice(0,4)+'</h1>'+
-    '<div class="ph-sub">K1 06:00–14:00 · K2 14:00–22:00 · K3 22:00–06:00 · mỗi ca 8 giờ · P: nghỉ phiên · L: nghỉ phép</div></div>';
+    '<div class="ph-sub">K1 06:00–14:00 · K2 14:00–22:00 · K3 22:00–06:00 · mỗi ca 8 giờ · P: nghỉ phiên · L: nghỉ phép'+(S.months[ym]&&S.months[ym].headShift?' · Trưởng ban trực cố định '+S.months[ym].headShift:'')+'</div></div>';
 }
 function printFoot(){
   var head=staffList().filter(function(s){return s.role==='head'&&s.active!==false;})[0];
@@ -220,7 +223,11 @@ function tabLich(){
       (can()?'<div class="row"><button class="btn pri" data-act="newstaff">Thêm nhân viên</button></div>':'<p class="hint">Chỉ trưởng ban thêm được nhân viên.</p>')+'</div>';
   }
   var nxt=addM(ymNow,1);
+  if(draft.hsMonth!==ym){draft.hs=(m&&m.headShift)||'';draft.hsMonth=ym;}
   h+='<div class="row sp">'+legend()+'<div class="row np">';
+  if(can()&&list.some(function(s){return s.role==='head';})){
+    h+='<label class="f" style="flex-direction:row;align-items:center;gap:6px">Ca cố định của trưởng ban<select id="f_hs" data-bind="hs" style="width:auto"><option value="">Xếp luân phiên như mọi người</option>'+KEYS.map(function(x){return '<option value="'+x+'">Cả tháng '+x+' ('+SHIFTS[x].t+')</option>';}).join('')+'</select></label>';
+  }
   if(can()){
     h+='<button class="btn pri" data-act="gen">'+(m?'Tạo lại cả tháng':'Tạo lịch tháng '+ym.slice(5,7))+'</button>';
     if(m){
@@ -230,6 +237,7 @@ function tabLich(){
     }
   }
   h+='<button class="btn" data-act="print">In lịch</button></div></div>';
+  if(m&&m.headShift)h+='<div class="alert info np">Trưởng ban trực cố định ca <b>'+m.headShift+'</b> cả tháng (trừ ngày nghỉ phiên, nghỉ phép). Các nhân viên còn lại được xếp xung quanh ca này.'+(can()&&draft.hs!==m.headShift?' Bấm "Tạo lại cả tháng" hoặc "Xếp lại" để áp dụng lựa chọn mới.':'')+'</div>';
   if(draft.confirm==='gen')h+='<div class="alert warn row sp"><span>Lịch tháng này đã có. Tạo lại sẽ ghi đè cả những ca đã đổi tay.</span><span class="row"><button class="btn sm danger" data-act="gen2">Ghi đè</button><button class="btn sm" data-act="cancel">Hủy</button></span></div>';
   if(!m){
     h+='<div class="card stack"><h3>Chưa có lịch tháng '+ym.slice(5,7)+'/'+ym.slice(0,4)+'</h3><p class="muted" style="margin:0">Lịch được tạo mỗi tháng một lần vào ngày mùng 1'+(ym===nxt?' (tháng này sẽ tạo vào 01/'+ym.slice(5,7)+')':'')+'. Nghỉ phiên và nghỉ phép đã nhập sẽ được tính tự động.</p></div>';
@@ -398,12 +406,14 @@ function tabTongHop(){
   h+='<div class="tbl-wrap"><table class="tb"><thead><tr><th>Mã số</th><th>Họ tên</th><th class="n">Nghỉ phiên (ngày)</th><th class="n">Nghỉ phép (ngày)</th><th class="n">Ngày làm</th><th class="n">K1 (giờ)</th><th class="n">K2 (giờ)</th><th class="n">K3 (giờ)</th><th class="n">Tổng giờ</th></tr></thead><tbody>';
   rows.forEach(function(r){
     KEYS.concat(['P','L','hours','work']).forEach(function(x){tot[x]+=r[x];});
-    h+='<tr><td><b>'+esc(r.s.code||'')+'</b></td><td>'+esc(r.s.name)+'</td><td class="n">'+r.P+'</td><td class="n">'+r.L+'</td><td class="n">'+r.work+'</td><td class="n">'+r.K1*HOURS+'</td><td class="n">'+r.K2*HOURS+'</td><td class="n">'+(r.K3?r.K3*HOURS:(m?'<span class="chip bad">0</span>':'0'))+'</td><td class="n"><b>'+r.hours+'</b></td></tr>';
+    h+='<tr><td><b>'+esc(r.s.code||'')+'</b></td><td>'+esc(r.s.name)+'</td><td class="n">'+r.P+'</td><td class="n">'+r.L+'</td><td class="n">'+r.work+'</td><td class="n">'+r.K1*HOURS+'</td><td class="n">'+r.K2*HOURS+'</td><td class="n">'+(r.K3?r.K3*HOURS:(m&&!(r.s.role==='head'&&m.headShift&&m.headShift!=='K3')?'<span class="chip bad">0</span>':'0'))+'</td><td class="n"><b>'+r.hours+'</b></td></tr>';
   });
   h+='</tbody><tfoot><tr><td></td><td>Cả tổ</td><td class="n">'+tot.P+'</td><td class="n">'+tot.L+'</td><td class="n">'+tot.work+'</td><td class="n">'+tot.K1*HOURS+'</td><td class="n">'+tot.K2*HOURS+'</td><td class="n">'+tot.K3*HOURS+'</td><td class="n">'+tot.hours+'</td></tr></tfoot></table></div>';
   if(m){
-    var min=Math.min.apply(null,rows.map(function(r){return r.K3;})),max=Math.max.apply(null,rows.map(function(r){return r.K3;}));
-    h+='<div class="alert '+(min>=1&&max-min<=2?'info':'warn')+'">Số ca K3 mỗi người: ít nhất '+min+', nhiều nhất '+max+'. '+(min>=1?'Ai cũng đã có ca K3.':'Có người chưa trực ca K3, hãy xếp lại.')+'</div>';
+    var fx=function(r){return r.s.role==='head'&&m.headShift&&m.headShift!=='K3';};
+    var rr=rows.filter(function(r){return !fx(r);});
+    var min=Math.min.apply(null,rr.map(function(r){return r.K3;})),max=Math.max.apply(null,rr.map(function(r){return r.K3;}));
+    h+='<div class="alert '+(min>=1&&max-min<=2?'info':'warn')+'">Số ca K3 mỗi người: ít nhất '+min+', nhiều nhất '+max+'. '+(min>=1?'Ai cũng đã có ca K3'+(m.headShift&&m.headShift!=='K3'?' (trừ trưởng ban trực cố định '+m.headShift+').':'.'):'Có người chưa trực ca K3, hãy xếp lại.')+'</div>';
   }
   return h;
 }
@@ -483,12 +493,12 @@ var ACT={
   gen2:function(){
     draft.confirm='';
     if(!activeStaff().length){toast('Chưa có nhân viên.');return;}
-    put('months',ym,{assign:generate(ym,1),generatedAt:Date.now()});
+    put('months',ym,{assign:generate(ym,1,draft.hs||''),generatedAt:Date.now(),headShift:draft.hs||''});
     toast('Đã tạo lịch tháng '+ym.slice(5,7)+'/'+ym.slice(0,4));
   },
   regen:function(){
     var f=Math.min(Math.max(parseInt(draft.fromDay,10)||1,1),dim(ym));
-    put('months',ym,{assign:generate(ym,f),generatedAt:Date.now(),fromDay:f});
+    put('months',ym,{assign:generate(ym,f,draft.hs||''),generatedAt:Date.now(),fromDay:f,headShift:draft.hs||''});
     toast('Đã xếp lại từ ngày '+f);
   },
   setshift:function(a){
