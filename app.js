@@ -15,8 +15,9 @@ function addM(ym,n){var d=new Date(+ym.slice(0,4),+ym.slice(5,7)-1+n,1);return d
 function fmtD(k){return k.slice(8,10)+'/'+k.slice(5,7)+'/'+k.slice(0,4);}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function clone(o){return JSON.parse(JSON.stringify(o||{}));}
-var now=new Date();
-var TODAY=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
+/* Ngày hiện tại tính theo giờ Việt Nam (UTC+7), khớp với máy chủ, không phụ thuộc múi giờ của điện thoại */
+var vn=new Date(Date.now()+7*3600*1000);
+var TODAY=vn.getUTCFullYear()+'-'+pad(vn.getUTCMonth()+1)+'-'+pad(vn.getUTCDate());
 var ymNow=TODAY.slice(0,7);
 
 /* ---------- trạng thái ---------- */
