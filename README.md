@@ -53,6 +53,12 @@ Gửi địa chỉ trang cho từng người. Trên điện thoại mở bằng 
 - Lịch mỗi tháng tự khóa vào 00:00 ngày 10 của tháng sau (ví dụ tháng 10 khóa từ 10/11), để còn vài ngày điều chỉnh. Sau đó nhân viên không ghi được giao ban hay đề nghị đổi ca của tháng đó, và không ai chỉnh được lịch tháng đó. Chỉ trưởng ban thấy nút **Mở khóa để chỉnh sửa** trên thanh thông báo của tháng đó (bấm **Khóa lại** khi xong). Ngày nghỉ phiên của từng người được lưu cố định theo từng tháng nên đổi hồ sơ sau này không làm thay đổi bảng công cũ.
 - Cuối tháng: tab **Tổng hợp**, bấm **Tải CSV** nếu cần gửi đi.
 
+## Tài khoản đối chiếu (chỉ xem)
+
+Dành cho phòng nhân sự hoặc người kiểm tra. Xem được mọi tab nhưng không có nút thao tác nào, và máy chủ từ chối mọi lệnh ghi. Tài khoản này không phải nhân viên nên không có tên trong bảng lịch, bảng tổng hợp hay danh sách nhân sự.
+
+Cách tạo: dán lại `supabase.sql` (bản mới nhất) vào SQL Editor rồi Run, sau đó dán và Run `tai-khoan-doi-chieu.sql`. Tệp này tạo tài khoản mã đăng nhập `0001`, PIN `12345`. Người dùng nên bấm **Đổi PIN** (ít nhất 6 ký tự) ngay lần đầu. Muốn xóa tài khoản, chạy lệnh `delete` ghi ở cuối tệp.
+
 ## Lưu ý
 - Mỗi khi repo có thay đổi ở `supabase.sql`, hãy dán lại toàn bộ tệp vào SQL Editor và Run một lần (chạy lại an toàn, không mất dữ liệu).
 - Quên PIN của nhân viên: trưởng ban vào Nhân sự → Sửa và đặt PIN mới.

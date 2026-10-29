@@ -31,7 +31,8 @@ var toastMsg='',toastT=null,scrolledFor='',unlocked={};
 function can(){return CANEDIT&&!viewAsStaff;}
 var LOCK_DAY=10; /* tháng M khóa từ 00:00 ngày 10 của tháng M+1 (giờ Việt Nam) */
 function monthLocked(m){return TODAY>=addM(m,1)+'-'+pad(LOCK_DAY);}
-function editable(m){return !monthLocked(m)||(can()&&!!unlocked[m]);}
+function isViewer(){return !!(ME&&ME.is_viewer);}
+function editable(m){if(isViewer())return false;return !monthLocked(m)||(can()&&!!unlocked[m]);}
 function lockBar(m){
   if(!monthLocked(m))return '';
   var h='<div class="alert info np row sp"><span><b>Tháng '+m.slice(5,7)+'/'+m.slice(0,4)+' đã khóa (từ ngày '+LOCK_DAY+' tháng sau).</b> '+(can()?(unlocked[m]?'Bạn đang mở khóa để chỉnh sửa.':'Chỉ trưởng ban mới sửa được tháng đã qua.'):'Chỉ trưởng ban mới sửa được tháng đã qua.')+'</span>';
@@ -50,17 +51,19 @@ function api(fn,args){
   });
 }
 function put(col,id,data){
+  if(isViewer()){toast('Tài khoản đối chiếu chỉ được xem.');return Promise.resolve();}
   S[col][id]=data;render();pending++;
   return api('api_put',{p_col:col,p_id:id,p_data:data}).catch(function(e){toast('Không lưu được: '+e.message);}).then(function(){pending--;return refresh(false,true);});
 }
 function del(col,id){
+  if(isViewer()){toast('Tài khoản đối chiếu chỉ được xem.');return Promise.resolve();}
   delete S[col][id];render();pending++;
   return api('api_del',{p_col:col,p_id:id}).catch(function(e){toast('Không xóa được: '+e.message);}).then(function(){pending--;return refresh(false,true);});
 }
 function applyData(d){
   var docs=d.docs||{};
   ['staff','leaves','months','notes','swaps','approvals'].forEach(function(c){S[c]=docs[c]||{};});
-  ME={id:d.me.id,is_head:!!d.me.is_head,name:(S.staff[d.me.id]||{}).name||''};
+  ME={id:d.me.id,is_head:!!d.me.is_head,is_viewer:!!d.me.is_viewer,name:(S.staff[d.me.id]||{}).name||d.me.name||''};
   me=ME.id;CANEDIT=ME.is_head;
   if(!CANEDIT)draft.swap.from=ME.id;
 }
@@ -185,10 +188,11 @@ function legend(){
 function header(){
   var h='<div class="top"><div class="brand"><span class="eyebrow">Bảo Vệ Việt Hưng · 3 ca · 8 giờ/ca</span><h1>Lịch trực</h1></div><div class="ctl">';
   h+='<div class="monthnav"><button data-act="mprev" aria-label="Tháng trước">‹</button><span class="m">Tháng '+ym.slice(5,7)+' / '+ym.slice(0,4)+'</span><button data-act="mnext" aria-label="Tháng sau">›</button></div>';
-  h+='<span class="chip '+(ME.is_head?'head':'')+'">'+esc(ME.name||'Tôi')+' · '+(ME.is_head?(viewAsStaff?'Trưởng ban (đang xem như nhân viên)':'Trưởng ban'):'Nhân viên')+'</span>';
+  h+='<span class="chip '+(ME.is_head?'head':'')+'">'+esc(ME.name||'Tôi')+' · '+(ME.is_viewer?'Đối chiếu, chỉ xem':(ME.is_head?(viewAsStaff?'Trưởng ban (đang xem như nhân viên)':'Trưởng ban'):'Nhân viên'))+'</span>';
   if(ME.is_head)h+='<button class="btn sm" data-act="togview">'+(viewAsStaff?'Quay lại quyền trưởng ban':'Xem như nhân viên')+'</button>';
   h+='<button class="btn sm" data-act="pinopen">Đổi PIN</button><button class="btn sm" data-act="logout">Đăng xuất</button>';
   h+='</div></div>';
+  if(isViewer())h+='<div class="alert info np"><b>Tài khoản đối chiếu.</b> Chỉ xem, không sửa được lịch, nhân sự, nghỉ phép, giao ban hay đổi ca.</div>';
   if(draft.pinOpen){
     var p=draft.pinForm;
     h+='<div class="card stack"><h3>Đổi mã PIN</h3><div class="grid"><label class="f">PIN hiện tại<input type="password" id="f_pinForm_old" data-bind="pinForm.old" data-enter="changepin" autocomplete="current-password"></label>'+
@@ -342,6 +346,7 @@ function tabGiaoBan(){
 
 function tabDoiCa(){
   var list=activeStaff(),sd=draft.swap,h=(sd.date?lockBar(sd.date.slice(0,7)):'')+'<div class="stack"><h2>Đổi ca</h2><span class="hint">Hai người đổi ca cho nhau trong cùng một ngày. Đổi ca chỉ có hiệu lực khi trưởng ban đồng ý. Bạn chỉ đề nghị đổi ca cho chính mình.</span></div>';
+  if(isViewer())return h+tabDoiCaList();
   var opt=function(v){return '<option value="">Chọn…</option>'+list.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join('');};
   var a=sd.from&&sd.date?statusOf(sd.from,sd.date):'',b=sd.to&&sd.date?statusOf(sd.to,sd.date):'';
   var info='';
@@ -356,6 +361,10 @@ function tabDoiCa(){
     '<label class="f">Đổi với<select id="f_swap_to" data-bind="swap.to" data-re="1">'+opt()+'</select></label></div>'+
     '<label class="f">Lý do<input type="text" id="f_swap_reason" data-bind="swap.reason" placeholder="Việc gia đình, khám bệnh…"></label>'+
     '<div class="row sp"><div>'+info+'</div><button class="btn pri" data-act="sendswap">Gửi đề nghị</button></div></div>';
+  return h+tabDoiCaList();
+}
+function tabDoiCaList(){
+  var h='';
   var ids=Object.keys(S.swaps).sort(function(x,y){return (S.swaps[y].createdAt||0)-(S.swaps[x].createdAt||0);});
   h+='<h3>Đề nghị gần đây</h3>';
   if(!ids.length)h+='<div class="card muted">Chưa có đề nghị đổi ca nào.</div>';
@@ -556,12 +565,14 @@ var ACT={
   gohoDate:function(a){draft.hoDate=a;draft.noteDate='';tab='giaoban';render();},
   hoday:function(a){var d=new Date(draft.hoDate||TODAY);d.setDate(d.getDate()+(+a));draft.hoDate=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());draft.noteDate='';render();},
   savenote:function(x){
+    if(isViewer()){toast('Tài khoản đối chiếu chỉ được xem.');return;}
     var k=draft.hoDate||TODAY,t=(draft.note[x]||'').trim();
     if(!editable(k.slice(0,7))){toast('Tháng đã khóa, chỉ trưởng ban sửa được.');return;}
     put('notes',k+'_'+x,{text:t,by:ME?ME.name:'',at:Date.now()});
     toast('Đã lưu giao ban '+x+' ngày '+fmtD(k).slice(0,5));
   },
   sendswap:function(){
+    if(isViewer()){toast('Tài khoản đối chiếu chỉ được xem.');return;}
     var s=draft.swap;
     if(!s.from||!s.to||!s.date){toast('Chọn người đề nghị, ngày và người đổi.');return;}
     if(!editable(s.date.slice(0,7))){toast('Tháng này đã khóa, chỉ trưởng ban sửa được.');return;}

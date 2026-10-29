@@ -24,6 +24,9 @@ create table if not exists public.accounts (
   failed       int not null default 0,
   locked_until timestamptz
 );
+-- Tài khoản đối chiếu (chỉ xem, ví dụ phòng nhân sự): is_viewer = true, không có hồ sơ nhân viên.
+alter table public.accounts add column if not exists is_viewer boolean not null default false;
+alter table public.accounts add column if not exists display_name text;
 create unique index if not exists accounts_code_lower on public.accounts (lower(code));
 
 create table if not exists public.sessions (
@@ -152,7 +155,8 @@ begin
     group by col
   ) x;
   return jsonb_build_object('ok', true, 'docs', docs,
-    'me', jsonb_build_object('id', m.staff_id, 'is_head', m.is_head));
+    'me', jsonb_build_object('id', m.staff_id, 'is_head', m.is_head,
+                             'is_viewer', m.is_viewer, 'name', coalesce(m.display_name, '')));
 end $$;
 
 create or replace function public.api_put(p_token text, p_col text, p_id text, p_data jsonb)
@@ -164,6 +168,9 @@ declare m public.accounts; mon text;
 begin
   m := public._me(p_token);
   if m.staff_id is null then return jsonb_build_object('ok', false, 'error', 'expired'); end if;
+  if m.is_viewer then
+    return jsonb_build_object('ok', false, 'error', 'Tài khoản đối chiếu chỉ được xem, không sửa được dữ liệu.');
+  end if;
   if p_col not in ('leaves', 'months', 'notes', 'swaps', 'approvals') then
     return jsonb_build_object('ok', false, 'error', 'Không hợp lệ.');
   end if;
