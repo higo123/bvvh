@@ -153,10 +153,11 @@ function summaryRows(month){
 
 /* ---------- giao diện ---------- */
 var app=document.getElementById('app');
+function sym(st){return st==='P'?'CN':st==='L'?'P':st;}
 function sw(st){
   if(st==='K1'||st==='K2'||st==='K3')return '<span class="sw s-'+st+'">'+st+'</span>';
-  if(st==='P')return '<span class="sw s-P" title="Nghỉ phiên">P</span>';
-  if(st==='L')return '<span class="sw s-L" title="Nghỉ phép">L</span>';
+  if(st==='P')return '<span class="sw s-P" title="Nghỉ phiên">CN</span>';
+  if(st==='L')return '<span class="sw s-L" title="Nghỉ phép">P</span>';
   return '<span class="sw s-N">–</span>';
 }
 function legend(){
@@ -185,7 +186,7 @@ function header(){
 function printHead(){
   var t=tab==='tonghop'?'Bảng tổng hợp tháng ':'Lịch trực tháng ';
   return '<div class="ph"><div class="ph-org">Bảo Vệ Việt Hưng</div><h1>'+t+ym.slice(5,7)+'/'+ym.slice(0,4)+'</h1>'+
-    '<div class="ph-sub">K1 06:00–14:00 · K2 14:00–22:00 · K3 22:00–06:00 · mỗi ca 8 giờ · P: nghỉ phiên · L: nghỉ phép'+(S.months[ym]&&S.months[ym].headShift?' · Trưởng ban trực cố định '+S.months[ym].headShift:'')+'</div></div>';
+    '<div class="ph-sub">K1 06:00–14:00 · K2 14:00–22:00 · K3 22:00–06:00 · mỗi ca 8 giờ · CN: nghỉ phiên · P: nghỉ phép'+(S.months[ym]&&S.months[ym].headShift?' · Trưởng ban trực cố định '+S.months[ym].headShift:'')+'</div></div>';
 }
 function printFoot(){
   var head=staffList().filter(function(s){return s.role==='head'&&s.active!==false;})[0];
@@ -262,7 +263,7 @@ function matrix(list){
     for(d=1;d<=N;d++){
       k=dk(ym,d);var st=statusOf(s.id,k);
       var cls=(st?'s-'+st:'s-N')+(k===TODAY?' todaycol':'')+(k===selDate&&selStaff===s.id?' sel':'');
-      h+='<td class="c '+cls+'" data-act="pickcell" data-arg="'+k+'|'+s.id+'" title="'+esc(s.name)+' · '+fmtD(k)+'">'+(st||'·')+'</td>';
+      h+='<td class="c '+cls+'" data-act="pickcell" data-arg="'+k+'|'+s.id+'" title="'+esc(s.name)+' · '+fmtD(k)+'">'+(st?sym(st):'·')+'</td>';
     }
     h+='</tr>';
   });
@@ -320,7 +321,7 @@ function tabDoiCa(){
   var info='';
   if(sd.from&&sd.to&&sd.date){
     if(sd.from===sd.to)info='<span class="err">Chọn hai người khác nhau.</span>';
-    else if(!/^K/.test(a)||!/^K/.test(b))info='<span class="err">Cả hai phải đang có ca vào ngày này (hiện '+esc(nameOf(sd.from))+': '+(a||'chưa xếp')+', '+esc(nameOf(sd.to))+': '+(b||'chưa xếp')+').</span>';
+    else if(!/^K/.test(a)||!/^K/.test(b))info='<span class="err">Cả hai phải đang có ca vào ngày này (hiện '+esc(nameOf(sd.from))+': '+(a?sym(a):'chưa xếp')+', '+esc(nameOf(sd.to))+': '+(b?sym(b):'chưa xếp')+').</span>';
     else if(a===b)info='<span class="err">Hai người đang cùng ca '+a+'.</span>';
     else info='<span class="hint">Sau khi đổi: '+esc(nameOf(sd.from))+' '+b+', '+esc(nameOf(sd.to))+' '+a+'.</span>';
   }
