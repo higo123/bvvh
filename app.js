@@ -179,6 +179,16 @@ function header(){
   return h;
 }
 
+function printHead(){
+  var t=tab==='tonghop'?'Bảng tổng hợp tháng ':'Lịch trực tháng ';
+  return '<div class="ph"><div class="ph-org">Bảo Vệ Việt Hưng</div><h1>'+t+ym.slice(5,7)+'/'+ym.slice(0,4)+'</h1>'+
+    '<div class="ph-sub">K1 06:00–14:00 · K2 14:00–22:00 · K3 22:00–06:00 · mỗi ca 8 giờ · P: nghỉ phiên · L: nghỉ phép</div></div>';
+}
+function printFoot(){
+  var head=staffList().filter(function(s){return s.role==='head'&&s.active!==false;})[0];
+  return '<div class="pf"><div><span>Người lập lịch</span></div><div><span>Trưởng ban'+(head?' · '+esc(head.name):'')+'</span><i>(ký, ghi rõ họ tên)</i></div></div>';
+}
+
 function screenAuth(){
   var a=draft.auth,setup=SCREEN==='setup';
   var h='<div class="auth card stack"><span class="eyebrow">Bảo Vệ Việt Hưng</span><h1>'+(setup?'Thiết lập lần đầu':'Lịch trực')+'</h1>';
@@ -210,7 +220,7 @@ function tabLich(){
       (can()?'<div class="row"><button class="btn pri" data-act="newstaff">Thêm nhân viên</button></div>':'<p class="hint">Chỉ trưởng ban thêm được nhân viên.</p>')+'</div>';
   }
   var nxt=addM(ymNow,1);
-  h+='<div class="row sp">'+legend()+'<div class="row">';
+  h+='<div class="row sp">'+legend()+'<div class="row np">';
   if(can()){
     h+='<button class="btn pri" data-act="gen">'+(m?'Tạo lại cả tháng':'Tạo lịch tháng '+ym.slice(5,7))+'</button>';
     if(m){
@@ -219,7 +229,7 @@ function tabLich(){
       h+='<label class="f" style="flex-direction:row;align-items:center;gap:6px">Xếp lại từ ngày<input type="number" id="f_fromDay" data-bind="fromDay" min="1" max="'+dim(ym)+'" style="width:64px"></label><button class="btn" data-act="regen">Xếp lại</button>';
     }
   }
-  h+='</div></div>';
+  h+='<button class="btn" data-act="print">In lịch</button></div></div>';
   if(draft.confirm==='gen')h+='<div class="alert warn row sp"><span>Lịch tháng này đã có. Tạo lại sẽ ghi đè cả những ca đã đổi tay.</span><span class="row"><button class="btn sm danger" data-act="gen2">Ghi đè</button><button class="btn sm" data-act="cancel">Hủy</button></span></div>';
   if(!m){
     h+='<div class="card stack"><h3>Chưa có lịch tháng '+ym.slice(5,7)+'/'+ym.slice(0,4)+'</h3><p class="muted" style="margin:0">Lịch được tạo mỗi tháng một lần vào ngày mùng 1'+(ym===nxt?' (tháng này sẽ tạo vào 01/'+ym.slice(5,7)+')':'')+'. Nghỉ phiên và nghỉ phép đã nhập sẽ được tính tự động.</p></div>';
@@ -261,7 +271,7 @@ function matrix(list){
 function rosterFor(k,x){return activeStaff().filter(function(s){return statusOf(s.id,k)===x;});}
 function dayPanel(){
   var k=selDate;if(!k||k.slice(0,7)!==ym)return '';
-  var h='<div class="card stack"><div class="row sp"><h2>'+WDF[wdOfKey(k)]+', '+fmtD(k)+'</h2><button class="btn sm" data-act="gohoDate" data-arg="'+k+'">Mở giao ban ngày này</button></div><div class="cols3">';
+  var h='<div class="card stack np"><div class="row sp"><h2>'+WDF[wdOfKey(k)]+', '+fmtD(k)+'</h2><button class="btn sm" data-act="gohoDate" data-arg="'+k+'">Mở giao ban ngày này</button></div><div class="cols3">';
   KEYS.forEach(function(x){
     var r=rosterFor(k,x),note=S.notes[k+'_'+x];
     h+='<div class="shiftcard"><header class="s-'+x+'"><b>'+x+'</b><span class="small">'+SHIFTS[x].t+'</span></header><div class="bd"><div class="names">'+
@@ -381,7 +391,7 @@ function tabNghi(){
 
 function tabTongHop(){
   var m=S.months[ym],rows=summaryRows(ym);
-  var h='<div class="row sp"><div class="stack"><h2>Tổng hợp tháng '+ym.slice(5,7)+'/'+ym.slice(0,4)+'</h2><span class="hint">Mỗi ca tính '+HOURS+' giờ. Nghỉ phiên là ngày nghỉ cố định hằng tuần; nghỉ phép theo kỳ trưởng ban đã đánh dấu.</span></div><button class="btn" data-act="csv">Tải CSV</button></div>';
+  var h='<div class="row sp"><div class="stack"><h2>Tổng hợp tháng '+ym.slice(5,7)+'/'+ym.slice(0,4)+'</h2><span class="hint">Mỗi ca tính '+HOURS+' giờ. Nghỉ phiên là ngày nghỉ cố định hằng tuần; nghỉ phép theo kỳ trưởng ban đã đánh dấu.</span></div><span class="row np"><button class="btn" data-act="print">In bảng</button><button class="btn" data-act="csv">Tải CSV</button></span></div>';
   if(!rows.length)return h+'<div class="card muted">Chưa có nhân viên.</div>';
   if(!m)h+='<div class="alert info">Chưa có lịch tháng này, số liệu ca sẽ là 0 đến khi trưởng ban tạo lịch.</div>';
   var tot={P:0,L:0,K1:0,K2:0,K3:0,hours:0,work:0};
@@ -407,6 +417,7 @@ function render(){
   else if(SCREEN==='login'||SCREEN==='setup')html=screenAuth();
   else if(SCREEN!=='app'||!ME)html='<div class="card muted">Đang tải…</div>';
   else html=header()+'<div class="stack">'+{lich:tabLich,giaoban:tabGiaoBan,doica:tabDoiCa,nhansu:tabNhanSu,nghi:tabNghi,tonghop:tabTongHop}[tab]()+'</div>';
+  if(SCREEN==='app'&&ME)html=printHead()+html+printFoot();
   app.innerHTML=html+(toastMsg?'<div class="toast" role="status">'+esc(toastMsg)+'</div>':'');
   app.querySelectorAll('[data-bind]').forEach(function(el){
     var v=getDraft(el.dataset.bind);
@@ -432,6 +443,7 @@ var ACT={
   mprev:function(){ym=addM(ym,-1);selDate=ym===ymNow?TODAY:ym+'-01';draft.fromDay=null;draft.confirm='';render();},
   mnext:function(){ym=addM(ym,1);selDate=ym===ymNow?TODAY:ym+'-01';draft.fromDay=null;draft.confirm='';render();},
   logout:function(){logout(false);},
+  print:function(){try{window.print();}catch(e){toast('Không mở được hộp thoại in.');}},
   pinopen:function(){draft.pinOpen=!draft.pinOpen;draft.pinForm={old:'',nw:'',err:''};render();},
   changepin:function(){
     var f=draft.pinForm;
