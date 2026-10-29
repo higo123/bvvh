@@ -455,7 +455,7 @@ function render(){
   else if(SCREEN!=='app'||!ME)html='<div class="card muted">Đang tải…</div>';
   else html=header()+'<div class="stack">'+{lich:tabLich,giaoban:tabGiaoBan,doica:tabDoiCa,nhansu:tabNhanSu,nghi:tabNghi,tonghop:tabTongHop}[tab]()+'</div>';
   if(SCREEN==='app'&&ME)html=printHead()+html+printFoot();
-  html+='<footer class="copy">Bản quyền © P.V.C</footer>';
+  html+='<footer class="copy">© P.V.C</footer>';
   app.innerHTML=html+(toastMsg?'<div class="toast" role="status">'+esc(toastMsg)+'</div>':'');
   app.querySelectorAll('[data-bind]').forEach(function(el){
     var v=getDraft(el.dataset.bind);
