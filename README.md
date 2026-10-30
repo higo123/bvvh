@@ -67,6 +67,7 @@ Dành cho phòng nhân sự hoặc người kiểm tra. Xem được mọi tab n
 Cách tạo: dán lại `supabase.sql` (bản mới nhất) vào SQL Editor rồi Run, sau đó dán và Run `tai-khoan-doi-chieu.sql`. Tệp này tạo tài khoản mã đăng nhập `0001`, PIN `12345`. Lần đăng nhập đầu ứng dụng bắt đổi PIN (ít nhất 6 ký tự). Tài khoản này xem được cả tab Nhật ký. Nếu họ quên PIN, trưởng ban vào tab **Nhân sự** và bấm nút đỏ **Đặt lại PIN DoiChieu về 123456** (có bước xác nhận), không cần chạy SQL. Muốn xóa tài khoản, chạy lệnh `delete` ghi ở cuối tệp `tai-khoan-doi-chieu.sql`.
 
 ## Lưu ý
+- Gặp lỗi `Could not find the function public.api_... in the schema cache` nghĩa là Supabase chưa có bản `supabase.sql` mới nhất (hoặc chưa nạp lại danh sách hàm). Dán lại toàn bộ `supabase.sql` vào SQL Editor, bấm Run, đợi vài giây rồi tải lại trang. Nếu vẫn lỗi, chạy thêm dòng `notify pgrst, 'reload schema';`.
 - Bản cập nhật này đổi cấu trúc cơ sở dữ liệu: **dán lại toàn bộ `supabase.sql` và Run** trước khi dùng giao diện mới (không mất dữ liệu). Nếu dùng tài khoản đối chiếu, chạy lại cả `tai-khoan-doi-chieu.sql`.
 - Sau khi cập nhật, các tài khoản demo và tài khoản đối chiếu bị buộc đổi PIN ở lần đăng nhập đầu. Muốn bắt toàn bộ nhân viên đổi PIN (ví dụ nghi lộ PIN), vào Nhân sự bấm **Bắt tất cả đổi PIN**.
 - Mỗi khi repo có thay đổi ở `supabase.sql`, hãy dán lại toàn bộ tệp vào SQL Editor và Run một lần (chạy lại an toàn, không mất dữ liệu).

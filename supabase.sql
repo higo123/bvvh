@@ -716,3 +716,6 @@ begin
     end if;
   end loop;
 end $$;
+
+-- Báo cho Supabase nạp lại danh sách hàm ngay (tránh lỗi "Could not find the function ... in the schema cache").
+notify pgrst, 'reload schema';

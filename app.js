@@ -50,7 +50,10 @@ function toast(m){toastMsg=m;render();clearTimeout(toastT);toastT=setTimeout(fun
 /* ---------- lưu trữ (Supabase qua các hàm RPC, mọi quyền kiểm tra ở máy chủ) ---------- */
 function api(fn,args){
   return SB.rpc(fn,Object.assign({p_token:TOKEN},args||{})).then(function(r){
-    if(r.error)throw new Error(r.error.message||'Lỗi kết nối');
+    if(r.error){
+      if(/Could not find the function|schema cache/i.test(r.error.message||''))throw new Error('Máy chủ chưa cập nhật bản mới. Trưởng ban cần dán lại toàn bộ tệp supabase.sql vào Supabase (SQL Editor) rồi bấm Run, xem README.');
+      throw new Error(r.error.message||'Lỗi kết nối');
+    }
     var d=r.data;
     if(d&&d.ok===false){if(d.error==='expired'){logout(true);}throw new Error(d.error==='expired'?'Phiên đăng nhập đã hết hạn.':(d.error||'Lỗi'));}
     return d;
