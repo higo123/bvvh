@@ -170,6 +170,8 @@ img{max-width:100%}
 .mx th.hol .dn{color:var(--warn)}
 .hlbox{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--warnbg);border:1px solid var(--warn)}
 .hn{border-left:3px solid var(--line);padding-left:8px}
+.modalbg{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.5)}
+.modal{position:fixed;z-index:61;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
 /* ---------- điện thoại ---------- */
 .only-m,.btabs,.sheet,.sheetbg{display:none}
 details.only-m summary{cursor:pointer;padding:4px 0}
@@ -236,7 +238,7 @@ details.alert summary{cursor:pointer}
   .myrow{grid-template-columns:78px 40px 1fr}
 }
 @media print{
-  .only-m,.btabs,.sheet,.sheetbg,.dstrip{display:none!important}
+  .only-m,.btabs,.sheet,.sheetbg,.dstrip,.modal,.modalbg{display:none!important}
   .only-d{display:block!important}
   @page{size:A4 landscape;margin:8mm}
   :root:root:root{

@@ -358,6 +358,15 @@ function alertsBar(){
   if(!n||tab==='doica')return '';
   return '<div class="alert warn np row sp"><span>'+(can()?n+' đề nghị đổi ca đang chờ duyệt.':'Có '+n+' đề nghị đổi ca đang chờ bạn trả lời.')+'</span><button class="btn sm pri" data-act="tab" data-arg="doica">Xem</button></div>';
 }
+function confirmModal(){
+  var c=draft.confirm;if((c!=='gen'&&c!=='regen')||!can())return '';
+  var f=Math.min(Math.max(parseInt(draft.fromDay,10)||1,1),dim(ym));
+  var all=c==='gen',mm=ym.slice(5,7)+'/'+ym.slice(0,4);
+  return '<div class="modalbg np" data-act="cancel"></div><div class="modal np" role="alertdialog" aria-modal="true" aria-labelledby="mdt"><h3 id="mdt">'+(all?'Tạo lại cả tháng '+mm+'?':'Xếp lại từ ngày '+f+'/'+ym.slice(5,7)+'?')+'</h3>'+
+    '<p style="margin:0">'+(all?'Toàn bộ lịch tháng <b>'+mm+'</b> sẽ được xếp lại từ đầu. Mọi ca bạn đã chỉnh hay điều chuyển bằng tay, và các ghi chú tăng ca (gọi người nghỉ làm thêm, kéo dài 4 giờ) của tháng này sẽ <b>mất</b>.':'Các ngày từ <b>'+f+'/'+ym.slice(5,7)+'</b> đến cuối tháng sẽ được xếp lại. Ca đã chỉnh tay và tăng ca trong khoảng này sẽ <b>mất</b>; các ngày trước đó giữ nguyên.')+'</p>'+
+    '<p class="hint" style="margin:0">Nghỉ phép, công thực tế (đột xuất, vắng, làm thêm) và ngày lễ vẫn được giữ. Thao tác này được ghi vào Nhật ký và không hoàn tác được.</p>'+
+    '<div class="row" style="justify-content:flex-end"><button class="btn" data-act="cancel">Không, giữ nguyên</button><button class="btn red" data-act="'+(all?'gen2':'regen2')+'">Có, '+(all?'tạo lại cả tháng':'xếp lại')+'</button></div></div>';
+}
 function header(){
   var h='<div class="top"><div class="brand"><span class="eyebrow">Bảo Vệ Việt Hưng · 3 ca · 8 giờ/ca</span><h1>Lịch trực</h1></div><div class="ctl">';
   h+='<div class="monthnav"><button data-act="mprev" aria-label="Tháng trước">‹</button><span class="m">Tháng '+ym.slice(5,7)+' / '+ym.slice(0,4)+'</span><button data-act="mnext" aria-label="Tháng sau">›</button></div>';
@@ -465,7 +474,6 @@ function tabLich(){
   h+='<button class="btn" data-act="print">In lịch</button></div></div>';
   h+=lockBar(ym);
   if(m&&m.headShift)h+='<div class="alert info np">Trưởng ban trực cố định ca <b>'+m.headShift+'</b> cả tháng (trừ ngày nghỉ phiên, nghỉ phép). Các nhân viên còn lại được xếp xung quanh ca này.'+(can()&&draft.hs!==m.headShift?' Bấm "Tạo lại cả tháng" hoặc "Xếp lại" để áp dụng lựa chọn mới.':'')+'</div>';
-  if(draft.confirm==='gen')h+='<div class="alert warn row sp"><span>Lịch tháng này đã có. Tạo lại sẽ ghi đè cả những ca đã đổi tay.</span><span class="row"><button class="btn sm danger" data-act="gen2">Ghi đè</button><button class="btn sm" data-act="cancel">Hủy</button></span></div>';
   if(!m){
     h+='<div class="card stack"><h3>Chưa có lịch tháng '+ym.slice(5,7)+'/'+ym.slice(0,4)+'</h3><p class="muted" style="margin:0">Lịch được tạo mỗi tháng một lần vào ngày mùng 1'+(ym===nxt?' (tháng này sẽ tạo vào 01/'+ym.slice(5,7)+')':'')+'. Nghỉ phiên và nghỉ phép đã nhập sẽ được tính tự động.</p></div>';
     return h;
@@ -826,6 +834,7 @@ function render(){
   else html=header()+alertsBar()+'<div class="stack">'+{lich:tabLich,giaoban:tabGiaoBan,doica:tabDoiCa,nhansu:tabNhanSu,nghi:tabNghi,tonghop:tabTongHop,nhatky:tabNhatKy,toi:tabToi}[tab]()+'</div>';
   if(SCREEN==='app'&&ME)html=printHead()+html+printFoot();
   html+='<footer class="copy">© P.V.C</footer>';
+  if(SCREEN==='app'&&ME)html+=confirmModal();
   app.innerHTML=html+(toastMsg?'<div class="toast" role="status">'+esc(toastMsg)+'</div>':'');
   app.querySelectorAll('[data-bind]').forEach(function(el){
     var v=getDraft(el.dataset.bind);
@@ -965,11 +974,17 @@ var ACT={
   },
   gen2:function(){
     draft.confirm='';
+    if(!editable(ym)){toast('Tháng đã khóa.');return;}
     if(!activeStaff().length){toast('Chưa có nhân viên.');return;}
     var om0=S.months[ym]||{};put('months',ym,{assign:generate(ym,1,draft.hs||''),generatedAt:Date.now(),headShift:draft.hs||'',offDays:snapshotOff(),adj:om0.adj||{},holidays:om0.holidays||{}});
     toast('Đã tạo lịch tháng '+ym.slice(5,7)+'/'+ym.slice(0,4));
   },
   regen:function(){
+    if(!editable(ym)){toast('Tháng đã khóa.');return;}
+    draft.confirm='regen';render();
+  },
+  regen2:function(){
+    draft.confirm='';
     if(!editable(ym)){toast('Tháng đã khóa.');return;}
     var f=Math.min(Math.max(parseInt(draft.fromDay,10)||1,1),dim(ym));
     var mv0={},om=(S.months[ym]&&S.months[ym].moved)||{};Object.keys(om).forEach(function(k){if(+k.slice(8,10)<f)mv0[k]=om[k];});
