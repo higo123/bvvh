@@ -163,6 +163,13 @@ img{max-width:100%}
 .copy{text-align:center;color:var(--muted);font-size:12px;letter-spacing:.06em;padding:20px 0 4px}
 /* in ấn: A4 ngang, nền sáng, chỉ giữ bảng */
 .ph,.pf{display:none}
+/* công thực tế, ngày lễ, cảnh báo nghỉ ngơi */
+.mx td.c sup{font-size:9px;font-weight:700;margin-left:1px;vertical-align:top;line-height:1}
+.mx td.c.rw{box-shadow:inset 0 -3px 0 var(--bad)}
+.mx th.hol{background:var(--warnbg)}
+.mx th.hol .dn{color:var(--warn)}
+.hlbox{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--warnbg);border:1px solid var(--warn)}
+.hn{border-left:3px solid var(--line);padding-left:8px}
 @media print{
   @page{size:A4 landscape;margin:8mm}
   :root:root:root{
