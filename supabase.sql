@@ -412,6 +412,8 @@ begin
     end if;
     if ex and old -> 'adj' is distinct from p_data -> 'adj' then summ := summ || '. Công thực tế có thay đổi'; end if;
     if ex and old -> 'holidays' is distinct from p_data -> 'holidays' then summ := summ || '. Ngày lễ có thay đổi'; end if;
+    if ex and old -> 'extra' is distinct from p_data -> 'extra' then summ := summ || '. Gọi người nghỉ phiên làm thêm có thay đổi'; end if;
+    if ex and old -> 'cover' is distinct from p_data -> 'cover' then summ := summ || '. Kéo dài/đến sớm 4 giờ có thay đổi'; end if;
     if ex and old -> 'headShift' is distinct from p_data -> 'headShift' then summ := summ || '. Ca cố định trưởng ban: ' || coalesce(p_data ->> 'headShift', ''); end if;
     if coalesce(trim(p_reason), '') <> '' then summ := summ || '. Lý do: ' || left(trim(p_reason), 300); end if;
     if not ex or old is distinct from p_data then

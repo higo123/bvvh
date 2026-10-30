@@ -10,6 +10,7 @@
 - Cảnh báo nghỉ ngơi: K3 rồi K1 liền ngày, làm quá 6 ngày liên tục (trên lịch, khi điều chuyển, khi đổi ca). Bộ xếp ca tự tránh K3 rồi K1.
 - Công thực tế: trưởng ban ghi nghỉ đột xuất, vắng không phép, giờ làm thêm, đánh dấu ngày lễ; bảng tổng hợp có giờ theo lịch, giờ thực tế, giờ ngày lễ (tải CSV được).
 - Nhật ký thay đổi (ai sửa gì, lúc nào, lý do mở khóa), sao lưu và khôi phục toàn bộ dữ liệu.
+- Mỗi ca cần ít nhất 3 người. Bộ xếp ca chia đều quân số; nếu sau đó có người nghỉ phép làm thiếu người, app báo đỏ, có nút **Tự cân bằng ca** (chuyển người từ ca đông sang ca thiếu mà vẫn đủ nghỉ ngơi). Nếu vẫn thiếu, trưởng ban bấm vào ngày đó để chọn: gọi người nghỉ phiên đi làm thêm (ô có chữ T), hoặc kéo dài ca (một người ca trước ở lại thêm 4 giờ, một người ca sau đến sớm 4 giờ, ô có chữ 4h). Giờ làm thêm tự vào bảng tổng hợp.
 - Chống ghi đè: nếu hai người sửa cùng một mục, người lưu sau được báo và tải lại bản mới thay vì âm thầm đè lên nhau.
 - PIN: tối thiểu 6 ký tự, chặn PIN dễ đoán, PIN do trưởng ban cấp hoặc đặt lại thì người dùng phải tự đổi ở lần đăng nhập đầu.
 - Mỗi nhân viên có mã số và PIN riêng. Chỉ trưởng ban sửa được mã số, hồ sơ, SĐT khẩn cấp (bắt buộc).

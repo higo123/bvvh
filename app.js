@@ -6,7 +6,8 @@ var SHIFTS={K1:{t:'06:00 – 14:00',n:'Ca sáng'},K2:{t:'14:00 – 22:00',n:'Ca 
 var KEYS=['K1','K2','K3'];
 var WD=['CN','T2','T3','T4','T5','T6','T7'];
 var WDF=['Chủ nhật','Thứ hai','Thứ ba','Thứ tư','Thứ năm','Thứ sáu','Thứ bảy'];
-var HOURS=8;
+var HOURS=8,MIN_CREW=3;
+var CT={K1:'10:00',K2:'18:00',K3:'02:00'};
 function pad(n){return String(n).padStart(2,'0');}
 function dk(ym,d){return ym+'-'+pad(d);}
 function wdOfKey(k){return new Date(+k.slice(0,4),+k.slice(5,7)-1,+k.slice(8,10)).getDay();}
@@ -134,10 +135,12 @@ function monthStaff(month){
   var m=S.months[month],a=(m&&m.assign)||{};
   return staffList().filter(function(s){if(s.active!==false)return true;for(var k in a){if(a[k][s.id])return true;}return false;});
 }
-function shiftOf(id,k){var m=S.months[k.slice(0,7)];return m&&m.assign&&m.assign[k]?m.assign[k][id]||'':'';}
+function extraOf(id,k){var m=S.months[k.slice(0,7)];return m&&m.extra&&m.extra[k]&&m.extra[k][id]||'';}
+function shiftOf(id,k){var m=S.months[k.slice(0,7)],e=extraOf(id,k);if(e)return e;return m&&m.assign&&m.assign[k]?m.assign[k][id]||'':'';}
 function statusOf(id,k){
   var s=S.staff[id];if(!s)return '';
   if(onLeave(id,k))return 'L';
+  if(extraOf(id,k))return extraOf(id,k);
   if(isOffDay(s,k))return 'P';
   return shiftOf(id,k);
 }
@@ -220,33 +223,114 @@ function generate(month,fromDay,hs){
   }
   return assign;
 }
+function prevShift(k,x){return x==='K1'?[addDays(k,-1),'K3']:x==='K2'?[k,'K1']:[k,'K2'];}
+function nextShift(k,x){return x==='K1'?[k,'K2']:x==='K2'?[k,'K3']:[addDays(k,1),'K1'];}
+function coverOf(month,k,x){var m=S.months[month],c=m&&m.cover&&m.cover[k]&&m.cover[k][x]||{};return {before:c.before||[],after:c.after||[]};}
+/* danh sách ca thiếu người (dưới MIN_CREW). covered = đã bù bằng tăng ca kéo dài */
 function coverage(month){
   var m=S.months[month];if(!m||!m.assign)return [];
   var out=[];
   for(var d=1;d<=dim(month);d++){
     var k=dk(month,d),c={K1:0,K2:0,K3:0};
     monthStaff(month).forEach(function(s){var st=statusOf(s.id,k);if(c[st]!==undefined)c[st]++;});
-    KEYS.forEach(function(x){if(c[x]===0)out.push(fmtD(k).slice(0,5)+' thiếu '+x);});
+    KEYS.forEach(function(x){
+      if(c[x]<MIN_CREW){
+        var cv=coverOf(month,k,x),need=MIN_CREW-c[x];
+        out.push({k:k,x:x,c:c[x],need:need,covered:cv.before.length>=need&&cv.after.length>=need});
+      }
+    });
   }
   return out;
 }
+function coverAdd(a,side){
+  var p=a.split('|'),k=p[0],x=p[1],id=p[2];
+  if(!can()||!editable(ym))return;
+  var m=clone(S.months[ym]);m.cover=m.cover||{};m.cover[k]=m.cover[k]||{};m.cover[k][x]=m.cover[k][x]||{before:[],after:[]};
+  var c=m.cover[k][x];c[side]=c[side]||[];if(c[side].indexOf(id)<0)c[side].push(id);
+  put('months',ym,m);toast(nameOf(id)+(side==='before'?' ở lại thêm 4 giờ đến ':' đến sớm 4 giờ, từ ')+CT[x]+' (tính 4 giờ làm thêm).');
+}
+function coverDel(a,side){
+  var p=a.split('|'),k=p[0],x=p[1],id=p[2];
+  if(!can()||!editable(ym))return;
+  var m=clone(S.months[ym]),c=m.cover&&m.cover[k]&&m.cover[k][x];if(!c)return;
+  c[side]=(c[side]||[]).filter(function(i){return i!==id;});
+  if(!(c.before||[]).length&&!(c.after||[]).length){delete m.cover[k][x];if(!Object.keys(m.cover[k]).length)delete m.cover[k];}
+  put('months',ym,m);
+}
+function keepBefore(o,f){var r={};Object.keys(o||{}).forEach(function(k){if(+k.slice(8,10)<f)r[k]=o[k];});return r;}
+function uniqDays(list){var o={};list.forEach(function(w){o[w.k]=1;});return Object.keys(o).sort();}
+function covText(w){return fmtD(w.k).slice(0,5)+' '+w.x+' chỉ có '+w.c+' người';}
+/* tự cân bằng quân số các ngày thiếu người bằng cách chuyển người từ ca đông sang ca thiếu */
+function balanceDays(month,days){
+  var orig=S.months[month];if(!orig||!orig.assign)return null;
+  var doc=clone(orig),changes=[];
+  doc.assign=doc.assign||{};doc.moved=doc.moved||{};
+  S.months[month]=doc;
+  try{
+    var k3=function(id){var n=0;for(var d=1;d<=dim(month);d++){var a=doc.assign[dk(month,d)];if(a&&a[id]==='K3')n++;}return n;};
+    days.forEach(function(k){
+      for(var it=0;it<12;it++){
+        var L={K1:[],K2:[],K3:[]};
+        monthStaff(month).forEach(function(s){var st=statusOf(s.id,k);if(L[st]&&!extraOf(s.id,k))L[st].push(s);});
+        var cnt={};KEYS.forEach(function(x){cnt[x]=statusCount(month,k,x);});
+        var xs=KEYS.slice().sort(function(a,b){return cnt[a]-cnt[b];}),x=xs[0],y=xs[2];
+        if(cnt[x]>=MIN_CREW&&cnt[y]-cnt[x]<=1)break;
+        if(cnt[y]-cnt[x]<2)break;
+        var best=null,bp=1e9;
+        L[y].forEach(function(p){
+          if(p.role==='head'&&doc.headShift)return;
+          var prev=statusOf(p.id,addDays(k,-1)),next=statusOf(p.id,addDays(k,1)),pen=0;
+          if(x==='K1'&&prev==='K3')pen+=1000;
+          if(x==='K3'&&next==='K1')pen+=1000;
+          if(y==='K3'&&k3(p.id)<=1)pen+=500;
+          if(x==='K3')pen+=k3(p.id)*10;
+          if(y==='K3')pen-=k3(p.id)*10;
+          if(x==='K2'&&prev==='K3')pen-=50;
+          if(pen<bp){bp=pen;best=p;}
+        });
+        if(!best||bp>=1000)break;
+        var from=y;
+        doc.assign[k]=doc.assign[k]||{};doc.assign[k][best.id]=x;
+        doc.moved[k]=doc.moved[k]||{};if(!doc.moved[k][best.id])doc.moved[k][best.id]=from;
+        changes.push(fmtD(k).slice(0,5)+' '+best.name+' '+from+'→'+x);
+      }
+    });
+  }finally{S.months[month]=orig;}
+  return changes.length?{doc:doc,changes:changes}:null;
+}
+function statusCount(month,k,x){var n=0;monthStaff(month).forEach(function(s){if(statusOf(s.id,k)===x)n++;});return n;}
 function summaryRows(month){
-  var N=dim(month);
-  return monthStaff(month).map(function(s){
-    var r={s:s,P:0,L:0,K1:0,K2:0,K3:0,none:0,sick:0,absent:0,ot:0,holH:0,actH:0};
+  var N=dim(month),m=S.months[month]||{};
+  var rows=monthStaff(month).map(function(s){
+    var r={s:s,P:0,L:0,K1:0,K2:0,K3:0,none:0,sick:0,absent:0,ot:0,holH:0,actH:0,extra:0};
     for(var d=1;d<=N;d++){
       var k=dk(month,d),st=statusOf(s.id,k);
       if(st==='P')r.P++;else if(st==='L')r.L++;else if(st)r[st]++;else r.none++;
       if(/^K/.test(st)){
-        var a=adjOf(month,s.id,k),ot=parseFloat(a.ot)||0;
+        var a=adjOf(month,s.id,k),ot=parseFloat(a.ot)||0,ex=!!extraOf(s.id,k);
         if(a.t==='sick')r.sick++;else if(a.t==='absent')r.absent++;
-        else{r.actH+=HOURS;if(isHoliday(k))r.holH+=HOURS;}
+        else{
+          r.actH+=HOURS;if(isHoliday(k))r.holH+=HOURS;
+          if(ex){r.extra++;r.ot+=HOURS;}
+        }
         if(ot>0){r.ot+=ot;r.actH+=ot;if(isHoliday(k))r.holH+=ot;}
       }
     }
-    r.work=r.K1+r.K2+r.K3;r.hours=r.work*HOURS;
+    r.work=r.K1+r.K2+r.K3;r.hours=(r.work-r.extra)*HOURS;
     return r;
   });
+  /* kéo dài ca 4 giờ (người ca trước ở lại, người ca sau đến sớm) tính là giờ làm thêm */
+  var byId={};rows.forEach(function(r){byId[r.s.id]=r;});
+  Object.keys(m.cover||{}).forEach(function(k){
+    KEYS.forEach(function(x){
+      var c=m.cover[k]&&m.cover[k][x];if(!c)return;
+      (c.before||[]).concat(c.after||[]).forEach(function(id){
+        var r=byId[id];if(!r)return;
+        r.ot+=4;r.actH+=4;if(isHoliday(k))r.holH+=4;
+      });
+    });
+  });
+  return rows;
 }
 /* ---------- giao diện ---------- */
 var app=document.getElementById('app');
@@ -259,7 +343,7 @@ function sw(st){
 }
 function legend(){
   return '<div class="legend">'+KEYS.map(function(k){return '<span class="lg">'+sw(k)+SHIFTS[k].n+' '+SHIFTS[k].t+'</span>';}).join('')+
-  '<span class="lg">'+sw('P')+'Nghỉ phiên</span><span class="lg">'+sw('L')+'Nghỉ phép</span><span class="lg"><span class="mvdot"></span>Trưởng ban điều chuyển</span><span class="lg"><b>Đ</b> nghỉ đột xuất</span><span class="lg"><b>V</b> vắng không phép</span><span class="lg"><b>+</b> làm thêm giờ</span><span class="lg"><span class="hlbox"></span>Ngày lễ</span></div>';
+  '<span class="lg">'+sw('P')+'Nghỉ phiên</span><span class="lg">'+sw('L')+'Nghỉ phép</span><span class="lg"><span class="mvdot"></span>Trưởng ban điều chuyển</span><span class="lg"><b>Đ</b> nghỉ đột xuất</span><span class="lg"><b>V</b> vắng không phép</span><span class="lg"><b>+</b> làm thêm giờ</span><span class="lg"><b>T</b> làm ngày nghỉ (tăng cường)</span><span class="lg"><b>4h</b> kéo dài / đến sớm 4 giờ</span><span class="lg"><span class="hlbox"></span>Ngày lễ</span></div>';
 }
 function badgeCount(){
   if(!ME)return 0;
@@ -386,8 +470,13 @@ function tabLich(){
     h+='<div class="card stack"><h3>Chưa có lịch tháng '+ym.slice(5,7)+'/'+ym.slice(0,4)+'</h3><p class="muted" style="margin:0">Lịch được tạo mỗi tháng một lần vào ngày mùng 1'+(ym===nxt?' (tháng này sẽ tạo vào 01/'+ym.slice(5,7)+')':'')+'. Nghỉ phiên và nghỉ phép đã nhập sẽ được tính tự động.</p></div>';
     return h;
   }
-  var cov=coverage(ym);
-  if(cov.length)h+='<div class="alert bad"><b>Có ca chưa đủ người:</b> '+esc(cov.slice(0,12).join(', '))+(cov.length>12?' … và '+(cov.length-12)+' ca khác':'')+'. Kiểm tra nghỉ phiên và nghỉ phép trùng ngày.</div>';
+  var cov=coverage(ym),unres=cov.filter(function(w){return !w.covered;}),res=cov.filter(function(w){return w.covered;});
+  if(unres.length){
+    var canBal=can()&&editable(ym),bal=canBal?balanceDays(ym,uniqDays(unres)):null;
+    h+='<div class="alert bad stack np"><span><b>Có '+unres.length+' ca chưa đủ '+MIN_CREW+' người:</b> '+esc(unres.slice(0,10).map(covText).join('; '))+(unres.length>10?' … và '+(unres.length-10)+' ca khác':'')+'. '+(canBal?'Chọn ngày trong bảng để bổ sung bằng cách chuyển ca, gọi người nghỉ phiên làm thêm hoặc kéo dài ca 4 giờ.':'Trưởng ban sẽ xử lý bằng cách chuyển ca, gọi người nghỉ làm thêm hoặc kéo dài ca.')+'</span>'+
+      (canBal?'<span class="row"><button class="btn sm pri" data-act="balanceall"'+(bal?'':' disabled')+'>Tự cân bằng ca các ngày thiếu</button>'+(bal?'':'<span class="hint">Không còn người nào chuyển được mà vẫn đủ nghỉ ngơi; hãy dùng tăng ca.</span>')+'<button class="btn sm" data-act="pickdate" data-arg="'+unres[0].k+'">Đến ngày '+fmtD(unres[0].k).slice(0,5)+'</button></span>':'')+'</div>';
+  }
+  if(res.length)h+='<div class="alert info np">Đã bù bằng tăng ca kéo dài: '+esc(res.map(covText).join('; '))+'.</div>';
   var missing=list.filter(function(s){var any=false;for(var d=1;d<=dim(ym);d++)if(shiftOf(s.id,dk(ym,d))){any=true;break;}return !any;});
   if(missing.length)h+='<div class="alert info">Chưa có ca cho: '+esc(missing.map(function(s){return s.name;}).join(', '))+'. Dùng “Xếp lại từ ngày” để đưa vào lịch.</div>';
   var rw=warnings(ym);
@@ -410,6 +499,8 @@ function matrix(list){
       var aj=/^K/.test(st)?adjOf(ym,s.id,k):{},mk='';
       if(aj.t==='sick')mk+='Đ';else if(aj.t==='absent')mk+='V';
       if(parseFloat(aj.ot)>0)mk+='+';
+      if(/^K/.test(st)&&extraOf(s.id,k))mk+='T';
+      if(coverMark(s.id,k))mk+='4h';
       var cls=(st?'s-'+st:'s-N')+(wk[s.id+'|'+k]?' rw':'')+(aj.t?' aj':'')+(m0&&m0.moved&&m0.moved[k]&&m0.moved[k][s.id]?' mv':'')+(k===TODAY?' todaycol':'')+(k===selDate&&selStaff===s.id?' sel':'');
       h+='<td class="c '+cls+'" data-act="pickcell" data-arg="'+k+'|'+s.id+'" title="'+esc(s.name)+' · '+fmtD(k)+(wk[s.id+'|'+k]?' · cảnh báo nghỉ ngơi':'')+'">'+(st?sym(st):'·')+(mk?'<sup>'+mk+'</sup>':'')+'</td>';
     }
@@ -419,7 +510,7 @@ function matrix(list){
     h+='<tr class="cnt"><th class="sticky">Quân số '+x+'</th>';
     for(d=1;d<=N;d++){
       k=dk(ym,d);var c=0;list.forEach(function(s){if(statusOf(s.id,k)===x)c++;});
-      h+='<td class="'+(c===0?'z':'')+'">'+c+'</td>';
+      h+='<td class="'+(c<MIN_CREW?'z':'')+'" title="'+(c<MIN_CREW?'Chưa đủ '+MIN_CREW+' người':'')+'">'+c+'</td>';
     }
     h+='</tr>';
   });
@@ -433,7 +524,31 @@ function dayStrip(){
   }
   return h+'</div>';
 }
+function coverMark(id,k){
+  var m=S.months[k.slice(0,7)];if(!m||!m.cover||!m.cover[k])return false;
+  for(var i=0;i<KEYS.length;i++){var c=m.cover[k][KEYS[i]];if(c&&((c.before||[]).indexOf(id)>=0||(c.after||[]).indexOf(id)>=0))return true;}
+  return false;
+}
 function rosterFor(k,x){return monthStaff(k.slice(0,7)).filter(function(s){return statusOf(s.id,k)===x;});}
+function shortHelp(k,x,c,canEdit){
+  if(c>=MIN_CREW)return '';
+  var need=MIN_CREW-c,cv=coverOf(ym,k,x),ok=cv.before.length>=need&&cv.after.length>=need;
+  var h='<div class="alert '+(ok?'info':'bad')+' stack"><b>'+x+' chỉ có '+c+' người (cần '+MIN_CREW+')'+(ok?' · đã bù bằng tăng ca':'')+'</b>';
+  var tag=function(id,act){return '<span class="tag">'+esc(nameOf(id))+(canEdit?' <button class="mvb" data-act="'+act+'" data-arg="'+k+'|'+x+'|'+id+'" title="Bỏ">×</button>':'')+'</span>';};
+  if(cv.before.length||cv.after.length){
+    h+='<span class="small">Kéo dài: '+cv.before.map(function(id){return tag(id,'uncoverb');}).join('')+(cv.before.length?' ở lại đến '+CT[x]+'. ':'')+cv.after.map(function(id){return tag(id,'uncovera');}).join('')+(cv.after.length?' đến sớm lúc '+CT[x]+'.':'')+'</span>';
+  }
+  if(!canEdit)return h+'<span class="hint">Trưởng ban sẽ bổ sung người hoặc kéo dài ca.</span></div>';
+  var offs=monthStaff(ym).filter(function(s){return statusOf(s.id,k)==='P'&&!onLeave(s.id,k);});
+  var pv=prevShift(k,x),nx=nextShift(k,x);
+  var prevL=monthStaff(pv[0].slice(0,7)).filter(function(s){return statusOf(s.id,pv[0])===pv[1]&&cv.before.indexOf(s.id)<0;});
+  var nextL=monthStaff(nx[0].slice(0,7)).filter(function(s){return statusOf(s.id,nx[0])===nx[1]&&cv.after.indexOf(s.id)<0;});
+  h+='<span class="small"><b>Cách 1.</b> Gọi người đang nghỉ phiên đi làm thêm (tính '+HOURS+' giờ làm thêm):</span><span class="names">'+(offs.length?offs.map(function(s){return '<button class="btn sm" data-act="callin" data-arg="'+k+'|'+x+'|'+s.id+'">+ '+esc(s.name)+'</button>';}).join(''):'<span class="hint">Không có ai nghỉ phiên ngày này.</span>')+'</span>';
+  h+='<span class="small"><b>Cách 2.</b> Kéo dài ca (cần '+need+' người mỗi bên). Người ca trước ('+pv[1]+' '+fmtD(pv[0]).slice(0,5)+') ở lại thêm 4 giờ đến '+CT[x]+':</span><span class="names">'+(prevL.length?prevL.map(function(s){return '<button class="btn sm" data-act="coverb" data-arg="'+k+'|'+x+'|'+s.id+'">'+esc(s.name)+' ở lại</button>';}).join(''):'<span class="hint">Không còn ai.</span>')+'</span>'+
+    '<span class="small">Người ca sau ('+nx[1]+' '+fmtD(nx[0]).slice(0,5)+') đến sớm 4 giờ, từ '+CT[x]+':</span><span class="names">'+(nextL.length?nextL.map(function(s){return '<button class="btn sm" data-act="covera" data-arg="'+k+'|'+x+'|'+s.id+'">'+esc(s.name)+' đến sớm</button>';}).join(''):'<span class="hint">Không còn ai.</span>')+'</span>';
+  h+='<span class="row"><button class="btn sm pri" data-act="balanceday" data-arg="'+k+'">Tự cân bằng ngày này</button></span></div>';
+  return h;
+}
 function dayPanel(){
   var k=selDate;if(!k||k.slice(0,7)!==ym)return '';
   var canMove=can()&&editable(ym);
@@ -446,6 +561,7 @@ function dayPanel(){
         if(canMove)t+=KEYS.filter(function(y){return y!==x;}).map(function(y){return '<button class="mvb s-'+y+'" data-act="moveto" data-arg="'+s.id+'|'+y+'" title="Chuyển '+esc(s.name)+' sang '+y+'">→'+y+'</button>';}).join('');
         return t+'</span>';
       }).join(''):'<span class="err">Chưa có ai</span>')+'</div>'+
+      shortHelp(k,x,r.length,canMove)+
       (note&&note.text?'<div class="hint"><b>Giao ban'+(nl.length>1?' ('+nl.length+' ghi chú, mới nhất)':'')+':</b> '+esc(note.text.length>140?note.text.slice(0,140)+'…':note.text)+'</div>':'<div class="hint">Chưa có ghi chú giao ban.</div>')+'</div></div>';
   });
   h+='</div>';
@@ -857,7 +973,7 @@ var ACT={
     if(!editable(ym)){toast('Tháng đã khóa.');return;}
     var f=Math.min(Math.max(parseInt(draft.fromDay,10)||1,1),dim(ym));
     var mv0={},om=(S.months[ym]&&S.months[ym].moved)||{};Object.keys(om).forEach(function(k){if(+k.slice(8,10)<f)mv0[k]=om[k];});
-    put('months',ym,{moved:mv0,assign:generate(ym,f,draft.hs||''),generatedAt:Date.now(),fromDay:f,headShift:draft.hs||'',offDays:snapshotOff(),adj:(S.months[ym]||{}).adj||{},holidays:(S.months[ym]||{}).holidays||{}});
+    put('months',ym,{moved:mv0,assign:generate(ym,f,draft.hs||''),generatedAt:Date.now(),fromDay:f,headShift:draft.hs||'',offDays:snapshotOff(),adj:(S.months[ym]||{}).adj||{},holidays:(S.months[ym]||{}).holidays||{},extra:keepBefore((S.months[ym]||{}).extra,f),cover:keepBefore((S.months[ym]||{}).cover,f)});
     toast('Đã xếp lại từ ngày '+f);
   },
   moveto:function(a){
@@ -868,6 +984,7 @@ var ACT={
     if(!from||from===to)return;
     var m=clone(S.months[ym]);m.assign=m.assign||{};m.assign[k]=m.assign[k]||{};
     m.assign[k][id]=to;m.moved=m.moved||{};m.moved[k]=m.moved[k]||{};m.moved[k][id]=from;
+    if(m.extra&&m.extra[k]&&m.extra[k][id])m.extra[k][id]=to;
     var nw=newWarnings(ym,m);
     put('months',ym,m);
     var left=rosterFor(k,from).length,now=rosterFor(k,to).length;
@@ -878,11 +995,34 @@ var ACT={
     var m=clone(S.months[ym]);m.assign=m.assign||{};m.assign[selDate]=m.assign[selDate]||{};
     var prev=m.assign[selDate][selStaff];
     if(a)m.assign[selDate][selStaff]=a;else delete m.assign[selDate][selStaff];
+    if(m.extra&&m.extra[selDate]&&m.extra[selDate][selStaff]){if(a)m.extra[selDate][selStaff]=a;else delete m.extra[selDate][selStaff];}
     if(a&&prev&&prev!==a){m.moved=m.moved||{};m.moved[selDate]=m.moved[selDate]||{};m.moved[selDate][selStaff]=prev;}
     var nw=newWarnings(ym,m);
     put('months',ym,m);
     if(nw.length)toast('Cảnh báo nghỉ ngơi: '+nw.map(function(x){return x.text;}).join('; ')+'.');
   },
+  balanceall:function(){
+    if(!can()||!editable(ym))return;
+    var r=balanceDays(ym,uniqDays(coverage(ym).filter(function(w){return !w.covered;})));
+    if(!r){toast('Không chuyển thêm được mà vẫn bảo đảm nghỉ ngơi. Hãy gọi người nghỉ làm thêm hoặc kéo dài ca.');return;}
+    put('months',ym,r.doc);toast('Đã cân bằng: '+r.changes.slice(0,6).join('; ')+(r.changes.length>6?' …':'')+'.');
+  },
+  balanceday:function(a){
+    if(!can()||!editable(ym))return;
+    var r=balanceDays(ym,[a]);
+    if(!r){toast('Ngày này không chuyển thêm được mà vẫn bảo đảm nghỉ ngơi. Hãy gọi người nghỉ làm thêm hoặc kéo dài ca.');return;}
+    put('months',ym,r.doc);toast('Đã cân bằng: '+r.changes.join('; ')+'.');
+  },
+  callin:function(a){
+    var p=a.split('|'),k=p[0],x=p[1],id=p[2];
+    if(!can()||!editable(ym)||!S.staff[id])return;
+    var m=clone(S.months[ym]);m.extra=m.extra||{};m.extra[k]=m.extra[k]||{};m.extra[k][id]=x;
+    put('months',ym,m);toast('Đã gọi '+nameOf(id)+' đi làm thêm ca '+x+' ngày '+fmtD(k).slice(0,5)+' (ngày nghỉ phiên). Tính '+HOURS+' giờ làm thêm.');
+  },
+  coverb:function(a){coverAdd(a,'before');},
+  covera:function(a){coverAdd(a,'after');},
+  uncoverb:function(a){coverDel(a,'before');},
+  uncovera:function(a){coverDel(a,'after');},
   gohoDate:function(a){draft.hoDate=a;draft.note={};draft.noteDate='';tab='giaoban';render();},
   hoday:function(a){draft.note={};var d=new Date(draft.hoDate||TODAY);d.setDate(d.getDate()+(+a));draft.hoDate=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());draft.noteDate='';render();},
   savenote:function(x){
@@ -962,8 +1102,18 @@ var ACT={
     if(l.to<l.from){l.err='Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.';render();return;}
     var lm=[l.from.slice(0,7),l.to.slice(0,7)].filter(function(m){return !editable(m);})[0];
     if(lm){l.err='Kỳ nghỉ thuộc tháng '+lm.slice(5,7)+'/'+lm.slice(0,4)+' đã khóa. Mở khóa tháng đó rồi thử lại.';render();return;}
-    l.err='';put('leaves',newId('l'),{staffId:l.staffId,from:l.from,to:l.to,note:l.note||''});
-    draft.leave={staffId:'',from:'',to:'',note:''};toast('Đã đánh dấu kỳ nghỉ. Xếp lại lịch để áp dụng.');
+    l.err='';var lid=newId('l'),lrec={staffId:l.staffId,from:l.from,to:l.to,note:l.note||''};
+    S.leaves[lid]=lrec;
+    var bmsg='';
+    [l.from.slice(0,7),l.to.slice(0,7)].filter(function(v,i,a){return a.indexOf(v)===i;}).forEach(function(mo){
+      if(!S.months[mo]||!editable(mo))return;
+      var days=[];for(var d=1;d<=dim(mo);d++){var kk=dk(mo,d);if(kk>=l.from&&kk<=l.to)days.push(kk);}
+      var r=balanceDays(mo,days);
+      if(r){put('months',mo,r.doc);bmsg=' Đã tự cân bằng lại ca các ngày thiếu người ('+r.changes.length+' thay đổi).';}
+    });
+    delete S.leaves[lid];
+    put('leaves',lid,lrec);
+    draft.leave={staffId:'',from:'',to:'',note:''};toast('Đã đánh dấu kỳ nghỉ.'+(bmsg||' Nếu có ca thiếu người, xem cảnh báo ở tab Lịch trực.'));
   },
   delleave:function(a){var l=S.leaves[a];if(l&&(!editable(l.from.slice(0,7))||!editable(l.to.slice(0,7)))){toast('Kỳ nghỉ thuộc tháng đã khóa. Mở khóa tháng đó ở tab Lịch trực.');return;}del('leaves',a);},
   csv:function(){
