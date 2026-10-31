@@ -191,6 +191,9 @@ function generate(month,fromDay,hs){
   var pa=fromDay>1?assign[pk]:(S.months[addM(month,-1)]&&S.months[addM(month,-1)].assign&&S.months[addM(month,-1)].assign[pk]);
   if(pa){for(id in pa){if(pa[id]==='K3')y3[id]=1;}}
   var order=['K3','K1','K2'];
+  /* tháng sau (nếu đã có lịch): ai làm K1 ngày 1 thì không xếp K3 ngày cuối tháng này */
+  var nxm=addM(month,1),nk1={},nas=S.months[nxm]&&S.months[nxm].assign&&S.months[nxm].assign[dk(nxm,1)];
+  if(nas){for(id in nas){if(nas[id]==='K1')nk1[id]=1;}}
   for(d=fromDay;d<=N;d++){
     k=dk(month,d);
     var av0=act.filter(function(s){return !onLeave(s.id,k)&&!(typeof s.offDay==='number'&&s.offDay>=0&&s.offDay===wdOfKey(k));});
@@ -205,7 +208,7 @@ function generate(month,fromDay,hs){
       pool.sort(function(a,b){return (fn(a)+tie(a))-(fn(b)+tie(b));});
       pool.splice(0,count).forEach(function(s){res[s.id]=key;cnt[s.id][key]++;});
     };
-    take('K3',sz.K3,function(s){return cnt[s.id].K3*100+(y3[s.id]?30:0);});
+    take('K3',sz.K3,function(s){return cnt[s.id].K3*100+(y3[s.id]?30:0)+(d===N&&nk1[s.id]?5000:0);});
     take('K2',sz.K2,function(s){return (y3[s.id]?-1000:0)+(cnt[s.id].K2-cnt[s.id].K1)*10;});
     pool.forEach(function(s){res[s.id]='K1';cnt[s.id].K1++;});
     av.forEach(function(s){
