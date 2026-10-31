@@ -1,0 +1,16 @@
+# Gọi Supabase mỗi ngày để dự án gói miễn phí không bị tạm dừng do lâu không dùng.
+name: keepalive
+on:
+  schedule:
+    - cron: '17 1 * * *'   # 08:17 giờ Việt Nam mỗi ngày
+  workflow_dispatch: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gọi hàm needs_setup
+        run: |
+          URL=$(grep -o 'https://[a-z0-9]*\.supabase\.co' config.js | head -1)
+          KEY=$(grep -o 'sb_publishable_[A-Za-z0-9_-]*' config.js | head -1)
+          curl -fsS -X POST "$URL/rest/v1/rpc/needs_setup" -H "apikey: $KEY" -H "Content-Type: application/json" -d '{}'
