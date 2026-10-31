@@ -93,11 +93,11 @@ textarea{min-height:88px;resize:vertical}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
 .lg{display:inline-flex;align-items:center;gap:6px;font-size:12px}
 .sw{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:22px;border-radius:4px;font-family:var(--f-display);font-weight:700;font-size:14px}
-/* Nhận dạng ca bằng tam giác đen ở góc ô: K1 góc trên trái; K2 góc trên trái và trên phải; K3 góc dưới phải */
-.s-K1,.s-K2,.s-K3{background-color:var(--surface);color:var(--ink);background-repeat:no-repeat;--tri:10px}
-.s-K1{background-image:linear-gradient(135deg,var(--ink) 50%,transparent 50%);background-position:top left;background-size:var(--tri) var(--tri)}
-.s-K2{background-image:linear-gradient(135deg,var(--ink) 50%,transparent 50%),linear-gradient(225deg,var(--ink) 50%,transparent 50%);background-position:top left,top right;background-size:var(--tri) var(--tri),var(--tri) var(--tri)}
-.s-K3{background-image:linear-gradient(315deg,var(--ink) 50%,transparent 50%);background-position:bottom right;background-size:var(--tri) var(--tri)}
+/* Nhận dạng ca bằng một tam giác đen ở góc ô: K1 trên trái, K2 trên phải, K3 dưới phải */
+.s-K1,.s-K2,.s-K3{background-color:var(--surface);color:var(--ink);background-repeat:no-repeat;--tri:10px;background-size:var(--tri) var(--tri)}
+.s-K1{background-image:linear-gradient(135deg,var(--ink) 50%,transparent 50%);background-position:top left}
+.s-K2{background-image:linear-gradient(225deg,var(--ink) 50%,transparent 50%);background-position:top right}
+.s-K3{background-image:linear-gradient(315deg,var(--ink) 50%,transparent 50%);background-position:bottom right}
 .mycard.s-K1,.mycard.s-K2,.mycard.s-K3{--tri:26px;border:1px solid var(--line)}
 .sw.s-K1,.sw.s-K2,.sw.s-K3{border:1px solid var(--line)}
 .s-P{background:var(--offbg);color:var(--off);background-image:repeating-linear-gradient(135deg,transparent 0 4px,var(--line) 4px 5px)}
