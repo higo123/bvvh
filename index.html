@@ -93,9 +93,13 @@ textarea{min-height:88px;resize:vertical}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
 .lg{display:inline-flex;align-items:center;gap:6px;font-size:12px}
 .sw{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:22px;border-radius:4px;font-family:var(--f-display);font-weight:700;font-size:14px}
-.s-K1{background:var(--k1bg);color:var(--k1)}
-.s-K2{background:var(--k2bg);color:var(--k2)}
-.s-K3{background:var(--k3bg);color:var(--k3)}
+/* Nhận dạng ca bằng tam giác đen ở góc ô: K1 góc trên trái; K2 góc trên trái và trên phải; K3 góc dưới phải */
+.s-K1,.s-K2,.s-K3{background-color:var(--surface);color:var(--ink);background-repeat:no-repeat;--tri:10px}
+.s-K1{background-image:linear-gradient(135deg,var(--ink) 50%,transparent 50%);background-position:top left;background-size:var(--tri) var(--tri)}
+.s-K2{background-image:linear-gradient(135deg,var(--ink) 50%,transparent 50%),linear-gradient(225deg,var(--ink) 50%,transparent 50%);background-position:top left,top right;background-size:var(--tri) var(--tri),var(--tri) var(--tri)}
+.s-K3{background-image:linear-gradient(315deg,var(--ink) 50%,transparent 50%);background-position:bottom right;background-size:var(--tri) var(--tri)}
+.mycard.s-K1,.mycard.s-K2,.mycard.s-K3{--tri:26px;border:1px solid var(--line)}
+.sw.s-K1,.sw.s-K2,.sw.s-K3{border:1px solid var(--line)}
 .s-P{background:var(--offbg);color:var(--off);background-image:repeating-linear-gradient(135deg,transparent 0 4px,var(--line) 4px 5px)}
 .s-L{background:var(--leavebg);color:var(--leave)}
 .s-N{color:var(--muted)}
@@ -157,7 +161,7 @@ img{max-width:100%}
 .mvb{border:0;border-radius:4px;font-family:var(--f-display);font-weight:700;font-size:13px;padding:0 6px;line-height:20px}
 .mvb:hover{filter:brightness(.92)}
 .mx td.c.mv{position:relative}
-.mx td.c.mv::after{content:"";position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:var(--ink)}
+.mx td.c.mv::after{content:"";position:absolute;bottom:3px;left:3px;width:6px;height:6px;border-radius:50%;background:var(--ink)}
 .mvdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ink)}
 
 .copy{text-align:center;color:var(--muted);font-size:12px;letter-spacing:.06em;padding:20px 0 4px}

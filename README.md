@@ -3,7 +3,7 @@
 Ứng dụng web xếp lịch trực 3 ca (K1 06–14, K2 14–22, K3 22–06) cho tổ bảo vệ. Chạy trên điện thoại, không cần cài đặt, không cần tài khoản Claude.
 
 **Tính năng**
-- Lịch tháng theo số ngày thật, mỗi ca một màu, tự chia đều và ai cũng có ca K3.
+- Lịch tháng theo số ngày thật, mỗi ca một dấu tam giác đen ở góc ô (K1 trên trái, K2 trên trái và trên phải, K3 dưới phải), tự chia đều và ai cũng có ca K3.
 - Nghỉ phiên (một ngày cố định mỗi tuần) và nghỉ phép (trưởng ban đánh dấu ngày bắt đầu, ngày kết thúc).
 - Đổi ca giữa hai người: người kia phải đồng ý trước, sau đó trưởng ban duyệt thì lịch mới đổi.
 - Giao ban theo từng ca mỗi ngày, ghi nối tiếp (mỗi ghi chú là một dòng có tên người và giờ, gửi rồi không sửa được).
